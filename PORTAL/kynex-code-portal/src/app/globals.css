@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  border-color: theme('colors.line');
+}
+
+body {
+  background-color: theme('colors.paper.DEFAULT');
+  color: theme('colors.ink.950');
+  font-feature-settings: 'ss01' 1, 'cv01' 1;
+}
+
+/* Visible keyboard focus everywhere — never suppressed */
+:focus-visible {
+  outline: 2px solid theme('colors.signal.DEFAULT');
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: theme('colors.signal.100');
+  color: theme('colors.ink.950');
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Utility layer: the app's recurring visual primitives, kept flat and
+   hairline — no shadows, no gradients, no glassmorphism. */
+@layer components {
+  .kx-panel {
+    @apply bg-white border border-line rounded;
+  }
+
+  .kx-eyebrow {
+    @apply font-mono text-[11px] tracking-[0.14em] uppercase text-ink-600;
+  }
+
+  .kx-input {
+    @apply w-full rounded border border-line bg-white px-3 py-2 text-sm text-ink-950
+           placeholder:text-ink-600/60 focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-signal focus-visible:border-signal transition-colors;
+  }
+
+  .kx-label {
+    @apply block text-xs font-medium text-ink-700 mb-1.5;
+  }
+
+  .kx-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded bg-ink-950 px-4 py-2
+           text-sm font-medium text-paper transition-colors hover:bg-ink-800
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .kx-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded border border-line bg-white px-4 py-2
+           text-sm font-medium text-ink-950 transition-colors hover:border-ink-950
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .kx-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded px-3 py-1.5
+           text-sm font-medium text-ink-700 transition-colors hover:bg-ink-950/5;
+  }
+}
