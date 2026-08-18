@@ -3,8 +3,10 @@ import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverActions: {
-    bodySizeLimit: '25mb'
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '25mb'
+    }
   }
 };
 
