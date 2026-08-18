@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
