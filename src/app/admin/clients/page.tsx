@@ -1,1 +1,8 @@
-{"code":"rate-limited","message":"You have hit the rate limit. Please upgrade to keep chatting.","providerLimitHit":false,"isRetryable":false}
+export default function Page() {
+  return (
+    <div>
+      <h1>Admin Clients</h1>
+      <p>This page was restored to a minimal placeholder to fix CI. Re-create the full admin clients UI from your local copy or previous commits.</p>
+    </div>
+  );
+}
