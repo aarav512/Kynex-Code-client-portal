@@ -32,6 +32,8 @@ export function Topbar({
         <button
           type="button"
           onClick={async () => {
+            const { clearKynexSession } = await import('@/lib/supabase/persist');
+            clearKynexSession();
             await getBrowserSupabase().auth.signOut();
             window.location.assign('/login');
           }}

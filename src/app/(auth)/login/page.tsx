@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
+import { saveKynexSession } from '@/lib/supabase/persist';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -32,11 +33,17 @@ function LoginForm() {
     try {
       const supabase = getBrowserSupabase();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError || !data.user) {
+      if (signInError || !data.session || !data.user) {
         setError(signInError?.message || 'Sign in failed');
         setLoading(false);
         return;
       }
+
+      saveKynexSession(data.session);
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
 
       const { data: profile } = await supabase
         .from('profiles')

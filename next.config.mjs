@@ -7,6 +7,16 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb'
     }
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' }
+        ]
+      }
+    ];
   }
 };
 

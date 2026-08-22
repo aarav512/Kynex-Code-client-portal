@@ -17,8 +17,9 @@ export function getBrowserSupabase(): SupabaseClient {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: window.localStorage
+        detectSessionInUrl: false,
+        storage: window.localStorage,
+        storageKey: 'kynex-auth'
       }
     });
   }

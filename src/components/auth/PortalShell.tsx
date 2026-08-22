@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { Topbar } from '@/components/nav/Topbar';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { restoreKynexSession } from '@/lib/supabase/persist';
 
 export function PortalShell({
   role,
@@ -16,8 +17,9 @@ export function PortalShell({
 
   useEffect(() => {
     const supabase = getBrowserSupabase();
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+
+    restoreKynexSession(supabase).then(async (session) => {
+      if (!session) {
         window.location.replace('/login');
         return;
       }
@@ -25,25 +27,23 @@ export function PortalShell({
       const { data: row } = await supabase
         .from('profiles')
         .select('id, role, full_name, email')
-        .eq('id', data.session.user.id)
+        .eq('id', session.user.id)
         .maybeSingle();
 
-      if (!row) {
-        window.location.replace('/login');
-        return;
-      }
-
-      if (role === 'admin' && row.role !== 'admin') {
-        window.location.replace('/dashboard');
-        return;
-      }
-
-      if (role === 'client' && row.role === 'admin') {
+      if (row?.role === 'admin' && role === 'client') {
         window.location.replace('/admin/dashboard');
         return;
       }
 
-      setProfile({ full_name: row.full_name, email: row.email });
+      if (row?.role === 'client' && role === 'admin') {
+        window.location.replace('/dashboard');
+        return;
+      }
+
+      setProfile({
+        full_name: row?.full_name || session.user.email || 'User',
+        email: row?.email || session.user.email || ''
+      });
     });
   }, [role]);
 

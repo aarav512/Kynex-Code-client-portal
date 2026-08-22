@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { restoreKynexSession } from '@/lib/supabase/persist';
 
 export function usePortalData<T>(loader: (supabase: SupabaseClient, session: Session) => Promise<T>) {
   const loaderRef = useRef(loader);
@@ -15,13 +16,16 @@ export function usePortalData<T>(loader: (supabase: SupabaseClient, session: Ses
     let active = true;
     const supabase = getBrowserSupabase();
 
-    supabase.auth.getSession().then(async ({ data: sessionData }) => {
-      if (!sessionData.session) {
-        window.location.replace('/login');
+    restoreKynexSession(supabase).then(async (session) => {
+      if (!session) {
+        if (active) {
+          setError('Not signed in');
+          setLoading(false);
+        }
         return;
       }
       try {
-        const result = await loaderRef.current(supabase, sessionData.session);
+        const result = await loaderRef.current(supabase, session);
         if (active) setData(result);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Failed to load');
