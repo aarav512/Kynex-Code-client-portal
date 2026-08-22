@@ -1,7 +1,7 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
-import { clearBrowserSession } from '@/lib/supabase/session';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
 export function Topbar({
   userName,
@@ -32,8 +32,7 @@ export function Topbar({
         <button
           type="button"
           onClick={async () => {
-            clearBrowserSession();
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+            await getBrowserSupabase().auth.signOut();
             window.location.assign('/login');
           }}
           className="flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-600 transition-base hover:bg-paper-100 hover:text-ink-900"

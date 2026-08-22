@@ -1,63 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { copySetCookies, updateSession } from '@/lib/supabase/middleware';
 
 export const runtime = 'edge';
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
-  const { response, user, supabase } = await updateSession(request);
-
-  const isAuthRoute =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/forgot-password') ||
-    pathname.startsWith('/reset-password');
-
-  if (!user && !isAuthRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    if (pathname !== '/login') {
-      url.searchParams.set('redirect', pathname);
-    }
-    return copySetCookies(response, NextResponse.redirect(url));
-  }
-
-  if (user && isAuthRoute && pathname !== '/reset-password') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
-    url.search = '';
-    return copySetCookies(response, NextResponse.redirect(url));
-  }
-
-  if (user && supabase) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const role = profile?.role;
-
-    if (role === 'client' && pathname.startsWith('/admin')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      url.search = '';
-      return copySetCookies(response, NextResponse.redirect(url));
-    }
-
-    if (role === 'admin' && !pathname.startsWith('/admin') && !isAuthRoute && pathname !== '/') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin/dashboard';
-      url.search = '';
-      return copySetCookies(response, NextResponse.redirect(url));
-    }
-  }
-
-  return response;
+export function middleware(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {

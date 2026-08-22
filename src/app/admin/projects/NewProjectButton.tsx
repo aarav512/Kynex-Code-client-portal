@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createProjectAction } from '@/actions/projects';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, X } from 'lucide-react';
 
@@ -32,18 +31,18 @@ export function NewProjectButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('client_id', clientId);
-    formData.append('status', status);
-    formData.append('start_date', startDate);
-    formData.append('due_date', dueDate);
-    formData.append('budget', budget);
-
-    const result = await createProjectAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const supabase = createClient();
+    const { error: insertError } = await supabase.from('projects').insert({
+      client_id: clientId,
+      title,
+      description: description || null,
+      status,
+      start_date: startDate || null,
+      due_date: dueDate || null,
+      budget: budget ? parseFloat(budget) : null
+    });
+    if (insertError) {
+      setError(insertError.message);
     } else {
       setOpen(false);
       setTitle(''); setDescription(''); setClientId(''); setStatus('planning');

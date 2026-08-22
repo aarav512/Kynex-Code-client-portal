@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateProjectAction } from '@/actions/projects';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { Pencil, X } from 'lucide-react';
 
 type ProjectData = {
@@ -30,17 +30,19 @@ export function EditProjectButton({ project }: { project: ProjectData }) {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('status', status);
-    formData.append('start_date', startDate);
-    formData.append('due_date', dueDate);
-    formData.append('budget', budget);
-
-    const result = await updateProjectAction(project.id, formData);
-    if (result?.error) {
-      setError(result.error);
+    const { error: updateError } = await getBrowserSupabase()
+      .from('projects')
+      .update({
+        title,
+        description: description || null,
+        status,
+        start_date: startDate || null,
+        due_date: dueDate || null,
+        budget: budget ? parseFloat(budget) : null
+      })
+      .eq('id', project.id);
+    if (updateError) {
+      setError(updateError.message);
     } else {
       setOpen(false);
       window.location.reload();

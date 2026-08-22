@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createRequestAction } from '@/actions/requests';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { Plus, X } from 'lucide-react';
 
 export function NewRequestButton() {
@@ -16,13 +16,38 @@ export function NewRequestButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('subject', subject);
-    formData.append('body', body);
-
-    const result = await createRequestAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const supabase = getBrowserSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) {
+      setError('Not signed in');
+      setLoading(false);
+      return;
+    }
+    const { data: profile } = await supabase.from('profiles').select('id, client_id').eq('id', userId).maybeSingle();
+    if (!profile?.client_id) {
+      setError('No client account linked');
+      setLoading(false);
+      return;
+    }
+    const { data: request, error: reqError } = await supabase
+      .from('requests')
+      .insert({ client_id: profile.client_id, subject, created_by: profile.id })
+      .select()
+      .single();
+    if (reqError || !request) {
+      setError(reqError?.message || 'Could not create request');
+      setLoading(false);
+      return;
+    }
+    const { error: msgError } = await supabase.from('request_messages').insert({
+      request_id: request.id,
+      author_id: profile.id,
+      body,
+      is_staff: false
+    });
+    if (msgError) {
+      setError(msgError.message);
     } else {
       setOpen(false);
       setSubject('');

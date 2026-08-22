@@ -1,68 +1,34 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
 import { PageHeader } from '@/components/ui/PageHeader';
-import { DataTable } from '@/components/ui/DataTable';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/lib/utils';
+import { PortalState, usePortalData } from '@/components/auth/usePortalData';
 import Link from 'next/link';
-import { MessageSquare, Plus } from 'lucide-react';
-import type { Request } from '@/lib/database.types';
 import { NewRequestButton } from './NewRequestButton';
 
-
-export const runtime = 'edge';
-
-export default async function ClientRequestsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('client_id')
-    .eq('id', user!.id)
-    .maybeSingle();
-
-  if (!profile?.client_id) {
-    return <EmptyState title="No client account linked" />;
-  }
-
-  const { data: requests } = await supabase
-    .from('requests')
-    .select('*')
-    .eq('client_id', profile.client_id)
-    .order('updated_at', { ascending: false });
+export default function ClientRequestsPage() {
+  const { loading, error, data } = usePortalData(async (supabase, session) => {
+    const { data: profile } = await supabase.from('profiles').select('client_id').eq('id', session.user.id).maybeSingle();
+    if (!profile?.client_id) return { linked: false, rows: [] as { id: string; subject: string; status: string; updated_at: string }[] };
+    const { data: rows } = await supabase.from('requests').select('*').eq('client_id', profile.client_id).order('updated_at', { ascending: false });
+    return { linked: true, rows: rows ?? [] };
+  });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Requests"
-        description="Submit and track your support requests."
-        action={<NewRequestButton />}
-      />
-      {requests && requests.length > 0 ? (
-        <DataTable<Request>
-          columns={[
-            { key: 'subject', label: 'Subject', render: (r) => (
-              <Link href={`/requests/${r.id}`} className="font-medium text-signal hover:text-signal-600">
-                {r.subject}
-              </Link>
-            )},
-            { key: 'status', label: 'Status', render: (r) => <StatusPill status={r.status} /> },
-            { key: 'created_at', label: 'Created', render: (r) => formatDate(r.created_at) },
-            { key: 'updated_at', label: 'Last Activity', render: (r) => formatDate(r.updated_at) }
-          ]}
-          rows={requests as Request[]}
-        />
-      ) : (
-        <EmptyState
-          icon={MessageSquare}
-          title="No requests yet"
-          description="Submit a new request to get help from the Kynex Code team."
-          action={<NewRequestButton />}
-        />
-      )}
-    </div>
+    <PortalState loading={loading} error={error}>
+      {data && !data.linked ? <EmptyState title="No client account linked" /> : data ? (
+        <div className="space-y-6">
+          <PageHeader title="Requests" description="Support and change requests." action={<NewRequestButton />} />
+          {data.rows.length ? data.rows.map((r) => (
+            <Link key={r.id} href={`/requests/${r.id}`} className="flex items-center justify-between rounded-lg border border-line bg-paper px-4 py-3">
+              <span>{r.subject}</span>
+              <span className="flex items-center gap-2 text-xs text-ink-600">{formatDate(r.updated_at)} <StatusPill status={r.status} /></span>
+            </Link>
+          )) : <EmptyState title="No requests yet" action={<NewRequestButton />} />}
+        </div>
+      ) : null}
+    </PortalState>
   );
 }

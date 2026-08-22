@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createAmcAction } from '@/actions/amc';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, X } from 'lucide-react';
 
@@ -30,18 +29,18 @@ export function NewAmcButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('client_id', clientId);
-    formData.append('plan_name', planName);
-    formData.append('amount', amount);
-    formData.append('status', status);
-    formData.append('start_date', startDate);
-    formData.append('end_date', endDate);
-    formData.append('notes', notes);
-
-    const result = await createAmcAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const supabase = createClient();
+    const { error: insertError } = await supabase.from('amc_contracts').insert({
+      client_id: clientId,
+      plan_name: planName,
+      amount: parseFloat(amount),
+      status,
+      start_date: startDate,
+      end_date: endDate,
+      notes: notes || null
+    });
+    if (insertError) {
+      setError(insertError.message);
     } else {
       setOpen(false);
       setClientId(''); setPlanName(''); setAmount(''); setStatus('active');

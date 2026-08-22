@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createPaymentAction } from '@/actions/payments';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, X } from 'lucide-react';
 
@@ -35,19 +34,19 @@ export function NewPaymentButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('client_id', clientId);
-    formData.append('description', description);
-    formData.append('amount', amount);
-    formData.append('status', status);
-    formData.append('due_date', dueDate);
-    formData.append('paid_date', paidDate);
-    formData.append('invoice_number', invoiceNumber);
-    if (projectId) formData.append('project_id', projectId);
-
-    const result = await createPaymentAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const supabase = createClient();
+    const { error: insertError } = await supabase.from('payments').insert({
+      client_id: clientId,
+      project_id: projectId || null,
+      description,
+      amount: parseFloat(amount),
+      status,
+      due_date: dueDate || null,
+      paid_date: paidDate || null,
+      invoice_number: invoiceNumber || null
+    });
+    if (insertError) {
+      setError(insertError.message);
     } else {
       setOpen(false);
       setClientId(''); setProjectId(''); setDescription(''); setAmount('');

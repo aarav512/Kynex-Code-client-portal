@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { uploadFileAction } from '@/actions/files';
 import { createClient } from '@/lib/supabase/client';
 import { Upload, X } from 'lucide-react';
 
@@ -31,6 +30,7 @@ export function UploadFileButton() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const supabase = createClient();
     if (!file || !clientId) {
       setError('Please select a client and file.');
       return;
@@ -38,14 +38,29 @@ export function UploadFileButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('client_id', clientId);
-    if (projectId) formData.append('project_id', projectId);
-
-    const result = await uploadFileAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const filePath = `${clientId}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('files').upload(filePath, file, {
+      contentType: file.type,
+      upsert: false
+    });
+    if (uploadError) {
+      setError(uploadError.message);
+      setLoading(false);
+      return;
+    }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const { error: dbError } = await supabase.from('files').insert({
+      client_id: clientId,
+      project_id: projectId || null,
+      file_name: file.name,
+      file_path: filePath,
+      file_size: file.size,
+      mime_type: file.type || 'application/octet-stream',
+      uploaded_by: sessionData.session?.user.id ?? null
+    });
+    if (dbError) {
+      await supabase.storage.from('files').remove([filePath]);
+      setError(dbError.message);
     } else {
       setOpen(false);
       setFile(null); setClientId(''); setProjectId('');

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { addRequestMessageAction, updateRequestStatusAction } from '@/actions/requests';
+import { useState } from 'react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import type { RequestMessage } from '@/lib/database.types';
 import { formatRelative } from '@/lib/utils';
 import { Send, CircleCheck as CheckCircle2 } from 'lucide-react';
@@ -19,28 +19,38 @@ export function RequestThread({
 }) {
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
     setError(null);
-
-    const formData = new FormData();
-    formData.append('body', body);
-
-    const result = await addRequestMessageAction(requestId, formData);
-    if (result?.error) {
-      setError(result.error);
+    const supabase = getBrowserSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) {
+      setError('Not signed in');
+      return;
+    }
+    const { error: msgError } = await supabase.from('request_messages').insert({
+      request_id: requestId,
+      author_id: userId,
+      body,
+      is_staff: isAdmin
+    });
+    if (msgError) {
+      setError(msgError.message);
     } else {
       setBody('');
+      window.location.reload();
     }
   }
 
   async function handleStatusChange(status: string) {
-    startTransition(async () => {
-      await updateRequestStatusAction(requestId, status);
-    });
+    setIsPending(true);
+    const { error: statusError } = await getBrowserSupabase().from('requests').update({ status }).eq('id', requestId);
+    setIsPending(false);
+    if (!statusError) window.location.reload();
   }
 
   return (

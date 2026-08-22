@@ -1,42 +1,24 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+'use client';
 
+import { useEffect } from 'react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
-export const runtime = 'edge';
+export default function RootPage() {
+  useEffect(() => {
+    const supabase = getBrowserSupabase();
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) {
+        window.location.replace('/login');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.session.user.id)
+        .maybeSingle();
+      window.location.replace(profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+    });
+  }, []);
 
-function isRedirectError(error: unknown) {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'digest' in error &&
-    String((error as { digest?: string }).digest).startsWith('NEXT_REDIRECT')
-  );
-}
-
-export default async function RootPage() {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      redirect('/login');
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.role === 'admin') {
-      redirect('/admin/dashboard');
-    } else {
-      redirect('/dashboard');
-    }
-  } catch (error) {
-    if (isRedirectError(error)) throw error;
-    redirect('/login');
-  }
+  return <p className="p-8 text-sm text-ink-600">Loading…</p>;
 }

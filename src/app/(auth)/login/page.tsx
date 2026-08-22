@@ -3,9 +3,8 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
-import { writeBrowserSession } from '@/lib/supabase/session';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -18,23 +17,26 @@ function LoginForm() {
     setError(null);
     setLoading(true);
 
+    const url = getSupabaseUrl();
+    const key = getSupabaseAnonKey();
+    if (!url || !key) {
+      setError('This deploy is missing Supabase keys. Rebuild with GitHub secrets NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      setLoading(false);
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
     const email = String(form.get('email') || '');
     const password = String(form.get('password') || '');
 
     try {
-      const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-      });
-
+      const supabase = getBrowserSupabase();
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError || !data.session || !data.user) {
+      if (signInError || !data.user) {
         setError(signInError?.message || 'Sign in failed');
         setLoading(false);
         return;
       }
-
-      writeBrowserSession(data.session.access_token, data.session.refresh_token);
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -52,20 +54,9 @@ function LoginForm() {
         nextPath = redirectTo;
       }
 
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          redirect: redirectTo
-        })
-      }).catch(() => null);
-
       window.location.assign(nextPath);
-    } catch {
-      setError('Could not reach the server. Try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the server. Try again.');
       setLoading(false);
     }
   }
@@ -110,10 +101,7 @@ function LoginForm() {
         {loading ? 'Signing in…' : 'Sign in'}
       </button>
       <div className="text-center">
-        <Link
-          href="/forgot-password"
-          className="text-xs text-ink-600 transition-base hover:text-paper"
-        >
+        <Link href="/forgot-password" className="text-xs text-ink-600 transition-base hover:text-paper">
           Forgot your password?
         </Link>
       </div>

@@ -1,107 +1,60 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/lib/utils';
-import { updateProfileAction } from './updateProfileAction';
+import { PortalState, usePortalData } from '@/components/auth/usePortalData';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
+export default function ClientProfilePage() {
+  const { loading, error, data } = usePortalData(async (supabase, session) => {
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+    const { data: client } = profile?.client_id
+      ? await supabase.from('clients').select('company_name, email, phone').eq('id', profile.client_id).maybeSingle()
+      : { data: null };
+    return { profile, client };
+  });
 
-export const runtime = 'edge';
+  return (
+    <PortalState loading={loading} error={error}>
+      {data?.profile ? <ProfileView profile={data.profile} client={data.client} /> : data ? <p className="text-sm text-ink-600">Profile not found.</p> : null}
+    </PortalState>
+  );
+}
 
-export default async function ClientProfilePage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+function ProfileView({
+  profile,
+  client
+}: {
+  profile: { id: string; full_name: string; email: string; role: string; created_at: string };
+  client: { company_name: string; email: string; phone: string | null } | null;
+}) {
+  const [name, setName] = useState(profile.full_name);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user!.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return <p className="text-sm text-ink-600">Profile not found.</p>;
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    const { error } = await getBrowserSupabase().from('profiles').update({ full_name: name }).eq('id', profile.id);
+    setMessage(error ? error.message : 'Saved');
   }
-
-  const { data: client } = await supabase
-    .from('clients')
-    .select('company_name, email, phone')
-    .eq('id', profile.client_id)
-    .maybeSingle();
 
   return (
     <div className="space-y-6">
       <PageHeader title="Profile" description="Your account information." />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Account info */}
-        <div className="rounded-lg border border-line bg-paper p-6">
-          <h2 className="mb-4 font-display text-lg font-semibold text-ink-900">Account</h2>
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-ink-600">Name</dt>
-              <dd className="font-medium text-ink-900">{profile.full_name}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-ink-600">Email</dt>
-              <dd className="font-medium text-ink-900">{profile.email}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-ink-600">Role</dt>
-              <dd className="font-medium text-ink-900 capitalize">{profile.role}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-ink-600">Joined</dt>
-              <dd className="font-medium text-ink-900">{formatDate(profile.created_at)}</dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Company info */}
-        <div className="rounded-lg border border-line bg-paper p-6">
-          <h2 className="mb-4 font-display text-lg font-semibold text-ink-900">Company</h2>
-          {client ? (
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-ink-600">Company</dt>
-                <dd className="font-medium text-ink-900">{client.company_name}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-600">Email</dt>
-                <dd className="font-medium text-ink-900">{client.email}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-600">Phone</dt>
-                <dd className="font-medium text-ink-900">{client.phone || '—'}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="text-sm text-ink-600">No company linked.</p>
-          )}
-        </div>
-
-        {/* Update name */}
-        <div className="rounded-lg border border-line bg-paper p-6 md:col-span-2">
-          <h2 className="mb-4 font-display text-lg font-semibold text-ink-900">Update Name</h2>
-          <form action={updateProfileAction} className="flex items-end gap-3">
-            <div className="flex-1">
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Full Name</label>
-              <input
-                type="text"
-                name="full_name"
-                defaultValue={profile.full_name}
-                required
-                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink-900 transition-base focus:border-signal focus:outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="rounded-md bg-signal px-4 py-2 text-sm font-medium text-white transition-base hover:bg-signal-600"
-            >
-              Save
-            </button>
-          </form>
-        </div>
+      <div className="rounded-lg border border-line bg-paper p-6 text-sm space-y-2">
+        <p><span className="text-ink-600">Email:</span> {profile.email}</p>
+        <p><span className="text-ink-600">Role:</span> {profile.role}</p>
+        <p><span className="text-ink-600">Joined:</span> {formatDate(profile.created_at)}</p>
+        {client ? <p><span className="text-ink-600">Company:</span> {client.company_name}</p> : null}
       </div>
+      <form onSubmit={save} className="flex items-end gap-3 rounded-lg border border-line bg-paper p-6">
+        <div className="flex-1">
+          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Full Name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-md border border-line px-3 py-2 text-sm" />
+        </div>
+        <button type="submit" className="rounded-md bg-signal px-4 py-2 text-sm text-white">Save</button>
+      </form>
+      {message ? <p className="text-sm text-ink-600">{message}</p> : null}
     </div>
   );
 }

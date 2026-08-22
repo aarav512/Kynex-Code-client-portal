@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientAction } from '@/actions/clients';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { Plus, X } from 'lucide-react';
 
 export function AddClientButton() {
@@ -19,16 +19,29 @@ export function AddClientButton() {
     setError(null);
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append('company_name', companyName);
-    formData.append('contact_name', contactName);
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('phone', phone);
+    const supabase = getBrowserSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setError('Not signed in');
+      setLoading(false);
+      return;
+    }
 
-    const result = await createClientAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    const res = await fetch('/api/admin/create-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        company_name: companyName,
+        contact_name: contactName,
+        email,
+        password,
+        phone
+      })
+    });
+    const result = (await res.json()) as { error?: string };
+    if (!res.ok || result?.error) {
+      setError(result.error || 'Could not create client');
     } else {
       setOpen(false);
       setCompanyName('');

@@ -1,61 +1,32 @@
-import { createClient } from '@/lib/supabase/server';
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { RequestThread } from '@/components/requests/RequestThread';
+import { PortalState, usePortalData } from '@/components/auth/usePortalData';
 import { ArrowLeft } from 'lucide-react';
 import type { RequestMessage } from '@/lib/database.types';
 
-
-export const runtime = 'edge';
-
-export default async function ClientRequestDetailPage({
-  params
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('client_id')
-    .eq('id', user!.id)
-    .maybeSingle();
-
-  if (!profile?.client_id) notFound();
-
-  const { data: request } = await supabase
-    .from('requests')
-    .select('*')
-    .eq('id', id)
-    .eq('client_id', profile.client_id)
-    .maybeSingle();
-
-  if (!request) notFound();
-
-  const { data: messages } = await supabase
-    .from('request_messages')
-    .select('*')
-    .eq('request_id', request.id)
-    .order('created_at', { ascending: true });
+export default function ClientRequestDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { loading, error, data } = usePortalData(async (supabase) => {
+    const { data: request } = await supabase.from('requests').select('*').eq('id', id).maybeSingle();
+    if (!request) return { request: null, messages: [] as RequestMessage[] };
+    const { data: messages } = await supabase.from('request_messages').select('*').eq('request_id', request.id).order('created_at', { ascending: true });
+    return { request, messages: (messages as RequestMessage[]) ?? [] };
+  });
 
   return (
-    <div className="space-y-6">
-      <Link href="/requests" className="flex items-center gap-1 text-sm text-ink-600 transition-base hover:text-ink-900">
-        <ArrowLeft className="h-4 w-4" /> Back to requests
-      </Link>
-      <PageHeader title={request.subject} action={<StatusPill status={request.status} />} />
-      <RequestThread
-        requestId={request.id}
-        messages={(messages as RequestMessage[]) ?? []}
-        isAdmin={false}
-        currentStatus={request.status}
-      />
-    </div>
+    <PortalState loading={loading} error={error}>
+      {data?.request ? (
+        <div className="space-y-6">
+          <Link href="/requests" className="flex items-center gap-1 text-sm text-ink-600"><ArrowLeft className="h-4 w-4" /> Back</Link>
+          <PageHeader title={data.request.subject} action={<StatusPill status={data.request.status} />} />
+          <RequestThread requestId={data.request.id} messages={data.messages} isAdmin={false} currentStatus={data.request.status} />
+        </div>
+      ) : data ? <p className="text-sm text-ink-600">Request not found.</p> : null}
+    </PortalState>
   );
 }
