@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { authCookieOptions } from '@/lib/supabase/edge';
+import { authCookieOptions, type PendingCookie } from '@/lib/supabase/edge';
 
 function isConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,7 +31,7 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: PendingCookie[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>

@@ -30,7 +30,7 @@ export function createEdgeClient(request: NextRequest, jar: PendingCookie[]) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: PendingCookie[]) {
           cookiesToSet.forEach((cookie) => jar.push(cookie));
         }
       }
