@@ -2,21 +2,24 @@
 
 import { useEffect } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { loadKynexSession, resolvePortalRole, restoreKynexSession } from '@/lib/supabase/persist';
 
 export default function RootPage() {
   useEffect(() => {
     const supabase = getBrowserSupabase();
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+    restoreKynexSession(supabase).then(async (session) => {
+      if (!session) {
         window.location.replace('/login');
         return;
       }
+      const storedRole = loadKynexSession()?.role;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
-        .eq('id', data.session.user.id)
+        .select('role, client_id')
+        .eq('id', session.user.id)
         .maybeSingle();
-      window.location.replace(profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+      const role = storedRole || resolvePortalRole(profile);
+      window.location.replace(role === 'admin' ? '/admin/dashboard' : '/dashboard');
     });
   }, []);
 

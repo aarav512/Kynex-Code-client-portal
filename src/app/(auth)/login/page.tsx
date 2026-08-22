@@ -5,11 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
-import { saveKynexSession } from '@/lib/supabase/persist';
+import { saveKynexSession, resolvePortalRole } from '@/lib/supabase/persist';
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '';
   const [error, setError] = useState<string | null>(searchParams.get('error'));
   const [loading, setLoading] = useState(false);
 
@@ -45,22 +44,30 @@ function LoginForm() {
         refresh_token: data.session.refresh_token
       });
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      let nextPath = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-      if (
-        profile?.role !== 'admin' &&
-        redirectTo.startsWith('/') &&
-        !redirectTo.startsWith('//') &&
-        !redirectTo.includes('\\')
-      ) {
-        nextPath = redirectTo;
+      let role: 'admin' | 'client' | null = null;
+      try {
+        const res = await fetch('/api/auth/role', {
+          headers: { Authorization: `Bearer ${data.session.access_token}` }
+        });
+        const payload = (await res.json()) as { role?: string };
+        if (payload.role === 'admin' || payload.role === 'client') {
+          role = payload.role;
+        }
+      } catch {
+        role = null;
+      }
+      if (!role) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, client_id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        role = resolvePortalRole(profile);
       }
 
+      saveKynexSession({ ...data.session, role });
+
+      const nextPath = role === 'admin' ? '/admin/dashboard' : '/dashboard';
       window.location.assign(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the server. Try again.');
