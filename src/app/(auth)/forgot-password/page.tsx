@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
-  const supabase = createClient();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -16,6 +15,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
 
+    const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`
     });

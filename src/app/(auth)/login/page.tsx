@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function LoginForm() {
-  const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
@@ -21,6 +20,7 @@ function LoginForm() {
     setError(null);
     setLoading(true);
 
+    const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function ResetPasswordPage() {
-  const supabase = createClient();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -15,8 +14,9 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const supabase = createClient();
     supabase.auth.getSession().then(() => setReady(true));
-  }, [supabase]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +32,7 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
+    const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
       setError(error.message);
