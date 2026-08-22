@@ -1,15 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { applyCookies, createEdgeClient, type PendingCookie } from '@/lib/supabase/edge';
+import { NextResponse } from 'next/server';
+import { appendClearedSessionCookies } from '@/lib/supabase/session';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
-  const jar: PendingCookie[] = [];
-  const supabase = createEdgeClient(request, jar);
-  await supabase.auth.signOut();
-
+export async function POST() {
   const response = NextResponse.json({ ok: true });
-  applyCookies(response, jar);
+  appendClearedSessionCookies(response.headers);
   return response;
 }

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { copyCookies, updateSession } from '@/lib/supabase/middleware';
+import { copySetCookies, updateSession } from '@/lib/supabase/middleware';
 
 export const runtime = 'edge';
 
@@ -23,14 +23,14 @@ export async function middleware(request: NextRequest) {
     if (pathname !== '/login') {
       url.searchParams.set('redirect', pathname);
     }
-    return copyCookies(response, NextResponse.redirect(url));
+    return copySetCookies(response, NextResponse.redirect(url));
   }
 
   if (user && isAuthRoute && pathname !== '/reset-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.search = '';
-    return copyCookies(response, NextResponse.redirect(url));
+    return copySetCookies(response, NextResponse.redirect(url));
   }
 
   if (user && supabase) {
@@ -46,14 +46,14 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
       url.search = '';
-      return copyCookies(response, NextResponse.redirect(url));
+      return copySetCookies(response, NextResponse.redirect(url));
     }
 
     if (role === 'admin' && !pathname.startsWith('/admin') && !isAuthRoute && pathname !== '/') {
       const url = request.nextUrl.clone();
       url.pathname = '/admin/dashboard';
       url.search = '';
-      return copyCookies(response, NextResponse.redirect(url));
+      return copySetCookies(response, NextResponse.redirect(url));
     }
   }
 

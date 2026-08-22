@@ -3,6 +3,9 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
+import { writeBrowserSession } from '@/lib/supabase/session';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -20,32 +23,46 @@ function LoginForm() {
     const password = String(form.get('password') || '');
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      });
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError || !data.session || !data.user) {
+        setError(signInError?.message || 'Sign in failed');
+        setLoading(false);
+        return;
+      }
+
+      writeBrowserSession(data.session.access_token, data.session.refresh_token);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      let nextPath = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+      if (
+        profile?.role !== 'admin' &&
+        redirectTo.startsWith('/') &&
+        !redirectTo.startsWith('//') &&
+        !redirectTo.includes('\\')
+      ) {
+        nextPath = redirectTo;
+      }
+
+      await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ email, password, redirect: redirectTo })
-      });
-      const text = await res.text();
-      let payload: { ok?: boolean; error?: string; next?: string } = {};
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        setError(text.slice(0, 200) || 'Sign in failed');
-        setLoading(false);
-        return;
-      }
+        body: JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          redirect: redirectTo
+        })
+      }).catch(() => null);
 
-      if (!res.ok || !payload.ok) {
-        setError(payload.error || 'Sign in failed');
-        setLoading(false);
-        return;
-      }
-
-      const nextPath =
-        payload.next?.startsWith('/') && !payload.next.startsWith('//')
-          ? payload.next
-          : '/dashboard';
       window.location.assign(nextPath);
     } catch {
       setError('Could not reach the server. Try again.');

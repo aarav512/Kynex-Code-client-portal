@@ -23,3 +23,8 @@ export function isSupabaseConfigured() {
   const key = getSupabaseAnonKey();
   return Boolean(url && key && !url.includes('placeholder') && !key.includes('placeholder'));
 }
+
+export function getSupabaseProjectRef() {
+  const match = getSupabaseUrl().match(/^https:\/\/([a-z0-9-]+)\.supabase\.co$/i);
+  return match?.[1] ?? 'kynex';
+}

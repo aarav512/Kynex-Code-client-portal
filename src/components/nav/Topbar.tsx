@@ -1,6 +1,7 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
+import { clearBrowserSession } from '@/lib/supabase/session';
 
 export function Topbar({
   userName,
@@ -31,6 +32,7 @@ export function Topbar({
         <button
           type="button"
           onClick={async () => {
+            clearBrowserSession();
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
             window.location.assign('/login');
           }}
