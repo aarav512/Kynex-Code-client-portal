@@ -1,6 +1,5 @@
 'use client';
 
-import { signOutAction } from '@/actions/auth';
 import { LogOut } from 'lucide-react';
 
 export function Topbar({
@@ -29,15 +28,17 @@ export function Topbar({
         <span className="hidden rounded-md border border-line bg-paper-100 px-2 py-0.5 text-xs font-medium text-ink-600 sm:inline">
           {role === 'admin' ? 'Administrator' : 'Client'}
         </span>
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-600 transition-base hover:bg-paper-100 hover:text-ink-900"
-          >
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+            window.location.assign('/login');
+          }}
+          className="flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-600 transition-base hover:bg-paper-100 hover:text-ink-900"
+        >
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Sign out</span>
           </button>
-        </form>
       </div>
     </header>
   );

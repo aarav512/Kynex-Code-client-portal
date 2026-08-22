@@ -1,32 +1,48 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
-import { signInAction } from '@/actions/auth';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-md bg-signal px-4 py-2 text-sm font-medium text-white transition-base hover:bg-signal-600 disabled:opacity-50"
-    >
-      {pending ? 'Signing in…' : 'Sign in'}
-    </button>
-  );
-}
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '';
-  const error = searchParams.get('error');
+  const [error, setError] = useState<string | null>(searchParams.get('error'));
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get('email') || '');
+    const password = String(form.get('password') || '');
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email, password, redirect: redirectTo })
+      });
+      const payload = (await res.json()) as { ok?: boolean; error?: string; next?: string };
+
+      if (!res.ok || !payload.ok) {
+        setError(payload.error || 'Sign in failed');
+        setLoading(false);
+        return;
+      }
+
+      window.location.assign(payload.next || '/dashboard');
+    } catch {
+      setError('Could not reach the server. Try again.');
+      setLoading(false);
+    }
+  }
 
   return (
-    <form action={signInAction} className="space-y-4">
-      {redirectTo ? <input type="hidden" name="redirect" value={redirectTo} /> : null}
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">
           Email
@@ -57,7 +73,13 @@ function LoginForm() {
           {error}
         </p>
       )}
-      <SubmitButton />
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full rounded-md bg-signal px-4 py-2 text-sm font-medium text-white transition-base hover:bg-signal-600 disabled:opacity-50"
+      >
+        {loading ? 'Signing in…' : 'Sign in'}
+      </button>
       <div className="text-center">
         <Link
           href="/forgot-password"

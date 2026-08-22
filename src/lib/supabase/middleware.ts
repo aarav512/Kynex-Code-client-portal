@@ -1,11 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-
-const cookieOptions = {
-  path: '/',
-  sameSite: 'lax' as const,
-  secure: true
-};
+import { authCookieOptions } from '@/lib/supabase/edge';
 
 function isConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,25 +26,29 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions,
+      cookieOptions: authCookieOptions,
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, { ...cookieOptions, ...options })
+            supabaseResponse.cookies.set(name, value, { ...authCookieOptions, ...options })
           );
         }
       }
     }
   );
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { data: userData } = await supabase.auth.getUser();
+  let user = userData.user;
+
+  if (!user) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    user = sessionData.session?.user ?? null;
+  }
 
   return { supabase, user, response: supabaseResponse };
 }

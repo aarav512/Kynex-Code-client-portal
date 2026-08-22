@@ -7,6 +7,10 @@ export async function middleware(request: NextRequest) {
   const { response, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith('/api')) {
+    return response;
+  }
+
   const isAuthRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
