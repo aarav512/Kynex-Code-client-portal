@@ -1,12 +1,5 @@
-// Route protection. Runs before every matched request:
-// 1. Refreshes the Supabase session cookie.
-// 2. Redirects unauthenticated users away from protected areas.
-// 3. Redirects each role away from the other role's area — this is a UX
-//    convenience only. The real enforcement is Postgres RLS (see
-//    supabase/schema.sql); this middleware cannot be the security boundary
-//    on its own, and the app never treats it as one.
 import { NextResponse, type NextRequest } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
+import { copyCookies, updateSession } from '@/lib/supabase/middleware';
 
 export const runtime = 'edge';
 
@@ -22,14 +15,17 @@ export async function middleware(request: NextRequest) {
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(url);
+    if (pathname !== '/login') {
+      url.searchParams.set('redirect', pathname);
+    }
+    return copyCookies(response, NextResponse.redirect(url));
   }
 
   if (user && isAuthRoute && pathname !== '/reset-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/';
-    return NextResponse.redirect(url);
+    url.search = '';
+    return copyCookies(response, NextResponse.redirect(url));
   }
 
   if (user && supabase) {
@@ -44,13 +40,15 @@ export async function middleware(request: NextRequest) {
     if (role === 'client' && pathname.startsWith('/admin')) {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+      url.search = '';
+      return copyCookies(response, NextResponse.redirect(url));
     }
 
     if (role === 'admin' && !pathname.startsWith('/admin') && !isAuthRoute && pathname !== '/') {
       const url = request.nextUrl.clone();
       url.pathname = '/admin/dashboard';
-      return NextResponse.redirect(url);
+      url.search = '';
+      return copyCookies(response, NextResponse.redirect(url));
     }
   }
 

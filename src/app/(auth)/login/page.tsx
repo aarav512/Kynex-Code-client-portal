@@ -1,64 +1,39 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
+import { signInAction } from '@/actions/auth';
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-md bg-signal px-4 py-2 text-sm font-medium text-white transition-base hover:bg-signal-600 disabled:opacity-50"
+    >
+      {pending ? 'Signing in…' : 'Sign in'}
+    </button>
+  );
+}
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '';
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (data.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      if (profile?.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push(redirect || '/dashboard');
-      }
-      router.refresh();
-    }
-    setLoading(false);
-  }
+  const redirectTo = searchParams.get('redirect') || '';
+  const error = searchParams.get('error');
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form action={signInAction} className="space-y-4">
+      {redirectTo ? <input type="hidden" name="redirect" value={redirectTo} /> : null}
       <div>
         <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">
           Email
         </label>
         <input
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          name="email"
           required
           autoFocus
           className="w-full rounded-md border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-white placeholder-ink-600 transition-base focus:border-signal focus:outline-none"
@@ -71,8 +46,7 @@ function LoginForm() {
         </label>
         <input
           type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          name="password"
           required
           className="w-full rounded-md border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-white placeholder-ink-600 transition-base focus:border-signal focus:outline-none"
           placeholder="••••••••"
@@ -83,13 +57,7 @@ function LoginForm() {
           {error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-md bg-signal px-4 py-2 text-sm font-medium text-white transition-base hover:bg-signal-600 disabled:opacity-50"
-      >
-        {loading ? 'Signing in…' : 'Sign in'}
-      </button>
+      <SubmitButton />
       <div className="text-center">
         <Link
           href="/forgot-password"

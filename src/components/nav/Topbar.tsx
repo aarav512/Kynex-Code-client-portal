@@ -1,7 +1,6 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { signOutAction } from '@/actions/auth';
 import { LogOut } from 'lucide-react';
 
 export function Topbar({
@@ -13,14 +12,6 @@ export function Topbar({
   userEmail: string;
   role: 'admin' | 'client';
 }) {
-  const router = useRouter();
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-  }
-
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-paper/80 px-4 backdrop-blur-md lg:px-6">
       <div className="flex items-center gap-3">
@@ -38,13 +29,15 @@ export function Topbar({
         <span className="hidden rounded-md border border-line bg-paper-100 px-2 py-0.5 text-xs font-medium text-ink-600 sm:inline">
           {role === 'admin' ? 'Administrator' : 'Client'}
         </span>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-600 transition-base hover:bg-paper-100 hover:text-ink-900"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Sign out</span>
-        </button>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-600 transition-base hover:bg-paper-100 hover:text-ink-900"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </form>
       </div>
     </header>
   );
