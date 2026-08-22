@@ -7,6 +7,8 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { ArrowLeft, Calendar, DollarSign, FileText, MessageSquare } from 'lucide-react';
 
 
+export const runtime = 'edge';
+
 export default async function ClientProjectDetailPage({
   params
 }: {

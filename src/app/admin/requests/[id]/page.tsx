@@ -8,6 +8,8 @@ import { ArrowLeft } from 'lucide-react';
 import type { RequestMessage } from '@/lib/database.types';
 
 
+export const runtime = 'edge';
+
 export default async function AdminRequestDetailPage({
   params
 }: {

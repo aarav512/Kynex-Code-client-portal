@@ -19,6 +19,8 @@ type PaymentRow = {
 };
 
 
+export const runtime = 'edge';
+
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
   const { data: payments } = await supabase

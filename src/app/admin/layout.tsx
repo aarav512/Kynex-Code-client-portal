@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { Topbar } from '@/components/nav/Topbar';
 
+export const runtime = 'edge';
+
 export default async function AdminLayout({
   children
 }: {

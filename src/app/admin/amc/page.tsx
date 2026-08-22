@@ -8,6 +8,8 @@ import type { AmcContract } from '@/lib/database.types';
 import { NewAmcButton } from './NewAmcButton';
 
 
+export const runtime = 'edge';
+
 export default async function AdminAmcPage() {
   const supabase = await createClient();
 

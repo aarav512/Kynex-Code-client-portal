@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Users, FolderKanban, MessageSquare, CreditCard, ShieldCheck, FileText } from 'lucide-react';
 
 
+export const runtime = 'edge';
+
 export default async function AdminDashboard() {
   const supabase = await createClient();
 

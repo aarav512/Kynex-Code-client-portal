@@ -9,6 +9,8 @@ import { FolderKanban } from 'lucide-react';
 import type { Project } from '@/lib/database.types';
 
 
+export const runtime = 'edge';
+
 export default async function ClientProjectsPage() {
   const supabase = await createClient();
   const {

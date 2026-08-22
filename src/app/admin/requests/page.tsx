@@ -17,6 +17,8 @@ type RequestRow = {
 };
 
 
+export const runtime = 'edge';
+
 export default async function AdminRequestsPage() {
   const supabase = await createClient();
   const { data: requests } = await supabase

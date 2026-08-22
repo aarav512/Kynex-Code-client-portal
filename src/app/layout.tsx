@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Premium client portal for project management, file delivery, and support.'
 };
 
+export const runtime = 'edge';
+
 export default function RootLayout({
   children
 }: {

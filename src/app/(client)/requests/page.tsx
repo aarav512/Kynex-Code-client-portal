@@ -10,6 +10,8 @@ import type { Request } from '@/lib/database.types';
 import { NewRequestButton } from './NewRequestButton';
 
 
+export const runtime = 'edge';
+
 export default async function ClientRequestsPage() {
   const supabase = await createClient();
   const {

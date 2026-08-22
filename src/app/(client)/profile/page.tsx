@@ -4,6 +4,8 @@ import { formatDate } from '@/lib/utils';
 import { updateProfileAction } from './updateProfileAction';
 
 
+export const runtime = 'edge';
+
 export default async function ClientProfilePage() {
   const supabase = await createClient();
   const {

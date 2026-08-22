@@ -15,6 +15,8 @@ type FileRow = {
 };
 
 
+export const runtime = 'edge';
+
 export default async function AdminFilesPage() {
   const supabase = await createClient();
   const { data: files } = await supabase

@@ -8,6 +8,8 @@ import { CreditCard } from 'lucide-react';
 import type { Payment } from '@/lib/database.types';
 
 
+export const runtime = 'edge';
+
 export default async function ClientPaymentsPage() {
   const supabase = await createClient();
   const {

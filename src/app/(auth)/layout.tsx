@@ -4,6 +4,8 @@ export const metadata: Metadata = {
   title: 'Sign in — Kynex Code'
 };
 
+export const runtime = 'edge';
+
 export default function AuthLayout({
   children
 }: {

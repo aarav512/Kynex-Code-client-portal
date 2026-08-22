@@ -7,6 +7,8 @@ import { ShieldCheck } from 'lucide-react';
 import type { AmcContract } from '@/lib/database.types';
 
 
+export const runtime = 'edge';
+
 export default async function ClientAmcPage() {
   const supabase = await createClient();
   const {

@@ -10,6 +10,8 @@ import type { Client } from '@/lib/database.types';
 import { AddClientButton } from './AddClientButton';
 
 
+export const runtime = 'edge';
+
 export default async function AdminClientsPage() {
   const supabase = await createClient();
   const { data: clients } = await supabase

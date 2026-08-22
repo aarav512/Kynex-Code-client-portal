@@ -7,6 +7,8 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { ArrowLeft, FolderKanban, FileText, CreditCard } from 'lucide-react';
 
 
+export const runtime = 'edge';
+
 export default async function AdminClientDetailPage({
   params
 }: {

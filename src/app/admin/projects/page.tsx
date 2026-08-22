@@ -19,6 +19,8 @@ type ProjectRow = {
 };
 
 
+export const runtime = 'edge';
+
 export default async function AdminProjectsPage() {
   const supabase = await createClient();
   const { data: projects } = await supabase

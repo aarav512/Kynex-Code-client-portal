@@ -3,6 +3,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/lib/utils';
 
 
+export const runtime = 'edge';
+
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
   const {

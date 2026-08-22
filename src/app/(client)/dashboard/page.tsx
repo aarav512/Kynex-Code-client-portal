@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { FolderKanban, FileText, MessageSquare, CreditCard } from 'lucide-react';
 
 
+export const runtime = 'edge';
+
 export default async function ClientDashboard() {
   const supabase = await createClient();
   const {

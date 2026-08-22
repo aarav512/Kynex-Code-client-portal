@@ -5,6 +5,8 @@ import { formatDate, formatBytes } from '@/lib/utils';
 import { FileText, Download } from 'lucide-react';
 
 
+export const runtime = 'edge';
+
 export default async function ClientFilesPage() {
   const supabase = await createClient();
   const {
