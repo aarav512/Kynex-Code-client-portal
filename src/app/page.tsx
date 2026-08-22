@@ -4,6 +4,15 @@ import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'edge';
 
+function isRedirectError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    String((error as { digest?: string }).digest).startsWith('NEXT_REDIRECT')
+  );
+}
+
 export default async function RootPage() {
   try {
     const supabase = await createClient();
@@ -26,7 +35,8 @@ export default async function RootPage() {
     } else {
       redirect('/dashboard');
     }
-  } catch {
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
     redirect('/login');
   }
 }
