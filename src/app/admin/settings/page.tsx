@@ -2,8 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/lib/utils';
 
+
 export default async function AdminSettingsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

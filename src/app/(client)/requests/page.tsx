@@ -9,8 +9,9 @@ import { MessageSquare, Plus } from 'lucide-react';
 import type { Request } from '@/lib/database.types';
 import { NewRequestButton } from './NewRequestButton';
 
+
 export default async function ClientRequestsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

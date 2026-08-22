@@ -7,8 +7,9 @@ import { ShieldCheck, Plus } from 'lucide-react';
 import type { AmcContract } from '@/lib/database.types';
 import { NewAmcButton } from './NewAmcButton';
 
+
 export default async function AdminAmcPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: contracts } = await supabase
     .from('amc_contracts')

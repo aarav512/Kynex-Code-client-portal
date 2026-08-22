@@ -6,8 +6,9 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { ShieldCheck } from 'lucide-react';
 import type { AmcContract } from '@/lib/database.types';
 
+
 export default async function ClientAmcPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

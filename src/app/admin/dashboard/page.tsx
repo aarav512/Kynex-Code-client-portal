@@ -5,8 +5,9 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import Link from 'next/link';
 import { Users, FolderKanban, MessageSquare, CreditCard, ShieldCheck, FileText } from 'lucide-react';
 
+
 export default async function AdminDashboard() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const [clients, projects, requests, payments, files, amc] = await Promise.all([
     supabase.from('clients').select('*').order('created_at', { ascending: false }),

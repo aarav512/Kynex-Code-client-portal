@@ -1,11 +1,10 @@
-export const runtime = 'edge';
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
 async function requireAdmin() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -90,7 +89,7 @@ export async function createClientAction(formData: FormData) {
 
 export async function updateClientAction(clientId: string, formData: FormData) {
   await requireAdmin();
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from('clients')
@@ -112,7 +111,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
 
 export async function deleteClientAction(clientId: string) {
   await requireAdmin();
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from('clients').delete().eq('id', clientId);
   if (error) return { error: error.message };

@@ -7,13 +7,14 @@ import { RequestThread } from '@/components/requests/RequestThread';
 import { ArrowLeft } from 'lucide-react';
 import type { RequestMessage } from '@/lib/database.types';
 
+
 export default async function ClientRequestDetailPage({
   params
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

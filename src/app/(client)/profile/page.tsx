@@ -3,8 +3,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/lib/utils';
 import { updateProfileAction } from './updateProfileAction';
 
+
 export default async function ClientProfilePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

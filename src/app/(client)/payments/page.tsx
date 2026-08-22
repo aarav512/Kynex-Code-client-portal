@@ -7,8 +7,9 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { CreditCard } from 'lucide-react';
 import type { Payment } from '@/lib/database.types';
 
+
 export default async function ClientPaymentsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

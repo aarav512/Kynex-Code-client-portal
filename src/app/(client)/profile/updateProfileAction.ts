@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
 export async function updateProfileAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -17,8 +17,7 @@ export async function updateProfileAction(formData: FormData) {
     .update({ full_name: fullName })
     .eq('id', user.id);
 
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
 
   revalidatePath('/profile');
-  return { success: true };
 }

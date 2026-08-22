@@ -4,8 +4,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate, formatBytes } from '@/lib/utils';
 import { FileText, Download } from 'lucide-react';
 
+
 export default async function ClientFilesPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

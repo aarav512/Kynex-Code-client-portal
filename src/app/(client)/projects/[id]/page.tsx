@@ -6,13 +6,14 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { formatDate, formatMoney } from '@/lib/utils';
 import { ArrowLeft, Calendar, DollarSign, FileText, MessageSquare } from 'lucide-react';
 
+
 export default async function ClientProjectDetailPage({
   params
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

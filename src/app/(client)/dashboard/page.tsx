@@ -6,8 +6,9 @@ import { formatDate, formatMoney, projectStatusLabel } from '@/lib/utils';
 import Link from 'next/link';
 import { FolderKanban, FileText, MessageSquare, CreditCard } from 'lucide-react';
 
+
 export default async function ClientDashboard() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

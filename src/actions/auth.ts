@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -6,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 export async function signInAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
 
@@ -36,7 +35,7 @@ export async function signInAction(formData: FormData) {
 }
 
 export async function signOutAction() {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
   redirect('/login');
 }

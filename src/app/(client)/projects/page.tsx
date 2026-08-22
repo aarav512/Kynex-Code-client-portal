@@ -8,8 +8,9 @@ import Link from 'next/link';
 import { FolderKanban } from 'lucide-react';
 import type { Project } from '@/lib/database.types';
 
+
 export default async function ClientProjectsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
