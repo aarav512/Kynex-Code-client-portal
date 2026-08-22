@@ -1,44 +1,40 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-
-const cookieOptions = {
-  path: '/',
-  sameSite: 'lax' as const,
-  secure: true
-};
+import { authCookieOptions, cookieInit, type PendingCookie } from '@/lib/supabase/edge';
+import {
+  getSupabaseAnonKey,
+  getSupabaseServiceRoleKey,
+  getSupabaseUrl
+} from '@/lib/supabase/env';
 
 export async function createClient() {
   const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions,
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
+  return createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    cookieOptions: authCookieOptions,
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet: PendingCookie[]) {
+        try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, { ...cookieOptions, ...options });
+            cookieStore.set(name, value, cookieInit(options));
           });
+        } catch {
+          // Cookie writes can throw during static/Edge render; middleware refreshes the session.
         }
       }
     }
-  );
+  });
 }
 
 export function createServiceClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return [];
-        },
-        setAll() {}
-      }
+  return createServerClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
+    cookies: {
+      getAll() {
+        return [];
+      },
+      setAll() {}
     }
-  );
+  });
 }

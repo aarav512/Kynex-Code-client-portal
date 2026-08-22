@@ -1,15 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { authCookieOptions } from '@/lib/supabase/edge';
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions: {
-        path: '/',
-        sameSite: 'lax',
-        secure: true
-      }
-    }
-  );
+  return createBrowserClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    cookieOptions: authCookieOptions
+  });
 }

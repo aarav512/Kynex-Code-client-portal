@@ -4,12 +4,13 @@ import { copyCookies, updateSession } from '@/lib/supabase/middleware';
 export const runtime = 'edge';
 
 export async function middleware(request: NextRequest) {
-  const { response, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/api')) {
-    return response;
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
   }
+
+  const { response, user, supabase } = await updateSession(request);
 
   const isAuthRoute =
     pathname.startsWith('/login') ||

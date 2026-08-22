@@ -26,7 +26,15 @@ function LoginForm() {
         credentials: 'same-origin',
         body: JSON.stringify({ email, password, redirect: redirectTo })
       });
-      const payload = (await res.json()) as { ok?: boolean; error?: string; next?: string };
+      const text = await res.text();
+      let payload: { ok?: boolean; error?: string; next?: string } = {};
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        setError(text.slice(0, 200) || 'Sign in failed');
+        setLoading(false);
+        return;
+      }
 
       if (!res.ok || !payload.ok) {
         setError(payload.error || 'Sign in failed');
@@ -34,7 +42,11 @@ function LoginForm() {
         return;
       }
 
-      window.location.assign(payload.next || '/dashboard');
+      const nextPath =
+        payload.next?.startsWith('/') && !payload.next.startsWith('//')
+          ? payload.next
+          : '/dashboard';
+      window.location.assign(nextPath);
     } catch {
       setError('Could not reach the server. Try again.');
       setLoading(false);
