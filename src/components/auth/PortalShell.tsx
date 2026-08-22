@@ -31,7 +31,7 @@ export function PortalShell({
         .eq('id', session.user.id)
         .maybeSingle();
 
-      const actualRole = storedRole || resolvePortalRole(row);
+      const actualRole = row ? resolvePortalRole(row) : storedRole || 'admin';
 
       if (actualRole === 'admin' && role === 'client') {
         window.location.replace('/admin/dashboard');
