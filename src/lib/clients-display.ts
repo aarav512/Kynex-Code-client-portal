@@ -54,8 +54,8 @@ export async function attachClientCompany<T extends { client_id?: string | null 
 
 export function normalizePortalRow<T extends Record<string, unknown>>(row: T): T {
   const storedName = String(row.file_name || '');
-  const path = String(row.file_path || (storedName.includes('/') ? storedName : ''));
-  const display = storedName.includes('/') ? storedName.split('/').pop() : storedName;
+  const path = String(row.storage_path || row.file_path || row.path || (storedName.includes('/') ? storedName : ''));
+  const display = storedName.includes('/') ? storedName.split('/').pop() : storedName || path.split('/').pop();
   return {
     ...row,
     title: row.title || row.name || row.subject || row.plan_name,

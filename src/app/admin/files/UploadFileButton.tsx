@@ -58,8 +58,10 @@ export function UploadFileButton() {
     const { error: dbError } = await insertMatchingColumns(supabase, 'files', {
       client_id: clientId,
       project_id: projectId || null,
-      file_name: filePath,
+      file_name: file.name,
       file_path: filePath,
+      storage_path: filePath,
+      path: filePath,
       file_size: file.size,
       mime_type: file.type || 'application/octet-stream',
       uploaded_by: sessionData.session?.user.id ?? null

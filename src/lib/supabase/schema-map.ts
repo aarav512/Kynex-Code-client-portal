@@ -27,7 +27,9 @@ const COLUMN_RENAME: Record<string, string[]> = {
   name: ['title', 'subject', 'plan_name'],
   body: ['description', 'message'],
   description: ['body', 'notes'],
-  file_path: ['file_name'],
+  file_path: ['file_name', 'storage_path', 'path'],
+  storage_path: ['file_path', 'file_name', 'path'],
+  path: ['storage_path', 'file_path'],
   due_date: ['due'],
   end_date: ['ends_at'],
   plan_name: ['name', 'title']
@@ -45,12 +47,29 @@ export function copyColumnAliases(row: Record<string, unknown>, column: string) 
   const value = row[column];
   if (value == null) return;
   if (column === 'file_path') {
-    row.file_name = value;
+    row.file_name = row.file_name || value;
+    row.storage_path = row.storage_path || value;
     return;
   }
   for (const alt of COLUMN_RENAME[column] || []) {
     if (row[alt] == null) row[alt] = value;
   }
+}
+
+export function expandRowAliases(row: Record<string, unknown>) {
+  const path = row.storage_path || row.file_path || row.path;
+  if (path != null) {
+    row.storage_path = path;
+    row.file_path = row.file_path ?? path;
+    row.path = row.path ?? path;
+    if (row.file_name == null) row.file_name = path;
+  }
+  if (row.email != null && row.contact_email == null) row.contact_email = row.email;
+  if (row.contact_email != null && row.email == null) row.email = row.contact_email;
+  if (row.phone != null && row.contact_phone == null) row.contact_phone = row.phone;
+  if (row.subject != null && row.title == null) row.title = row.subject;
+  if (row.title != null && row.name == null) row.name = row.title;
+  if (row.name != null && row.title == null) row.title = row.name;
 }
 
 export function fillRequiredColumn(row: Record<string, unknown>, column: string) {
@@ -72,6 +91,13 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
   if (column === 'contact_email' && row.email != null) {
     row.contact_email = row.email;
     return true;
+  }
+  if (column === 'storage_path' || column === 'file_path' || column === 'path') {
+    const path = row.storage_path || row.file_path || row.path || row.file_name;
+    if (path != null) {
+      row[column] = path;
+      return true;
+    }
   }
   return false;
 }

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   copyColumnAliases,
+  expandRowAliases,
   fillRequiredColumn,
   isMissingRelationError,
   mappedTable,
@@ -17,6 +18,7 @@ export async function insertMatchingColumns(
 
   for (const candidate of [mappedTable(table), ...names]) {
     const row: Record<string, unknown> = { ...payload };
+    expandRowAliases(row);
     for (let i = 0; i < 16; i++) {
       const { data, error } = await db.from(candidate).insert(row).select().single();
       if (!error) return { data, error: null as { message: string } | null };
@@ -26,11 +28,14 @@ export async function insertMatchingColumns(
       const missing = error.message.match(/Could not find the '([^']+)' column/i);
       if (missing) {
         copyColumnAliases(row, missing[1]);
-        delete row[missing[1]];
+        if (missing[1] !== 'storage_path') delete row[missing[1]];
         continue;
       }
       const required = error.message.match(/null value in column "([^"]+)"/i);
-      if (required && fillRequiredColumn(row, required[1])) continue;
+      if (required) {
+        expandRowAliases(row);
+        if (fillRequiredColumn(row, required[1])) continue;
+      }
       return { data: null, error };
     }
   }
