@@ -20,8 +20,9 @@ type PaymentRow = {
 
 export default function AdminPaymentsPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
-    const { data: payments } = await supabase.from('payments').select('*, clients!inner(company_name)').order('created_at', { ascending: false });
-    return { rows: (payments as PaymentRow[] | null) ?? [] };
+    const { data: payments } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
+    const { attachClientCompany } = await import('@/lib/clients-display');
+    return { rows: await attachClientCompany(supabase, (payments as PaymentRow[]) ?? []) };
   });
 
   return (

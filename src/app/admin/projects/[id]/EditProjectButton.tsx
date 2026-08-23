@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { updateMatchingColumns } from '@/lib/supabase/insert-matching';
 import { Pencil, X } from 'lucide-react';
 
 type ProjectData = {
@@ -30,17 +31,19 @@ export function EditProjectButton({ project }: { project: ProjectData }) {
     setError(null);
     setLoading(true);
 
-    const { error: updateError } = await getBrowserSupabase()
-      .from('projects')
-      .update({
+    const { error: updateError } = await updateMatchingColumns(
+      getBrowserSupabase(),
+      'projects',
+      {
         title,
         description: description || null,
         status,
         start_date: startDate || null,
         due_date: dueDate || null,
         budget: budget ? parseFloat(budget) : null
-      })
-      .eq('id', project.id);
+      },
+      project.id
+    );
     if (updateError) {
       setError(updateError.message);
     } else {

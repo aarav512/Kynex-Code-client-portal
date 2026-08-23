@@ -22,11 +22,9 @@ type ProjectRow = {
 
 export default function AdminProjectsPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
-    const { data: projects } = await supabase
-      .from('projects')
-      .select('*, clients!inner(company_name)')
-      .order('updated_at', { ascending: false });
-    return { rows: (projects as ProjectRow[] | null) ?? [] };
+    const { data: projects } = await supabase.from('projects').select('*').order('updated_at', { ascending: false });
+    const { attachClientCompany } = await import('@/lib/clients-display');
+    return { rows: await attachClientCompany(supabase, (projects as ProjectRow[]) ?? []) };
   });
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { insertMatchingColumns } from '@/lib/supabase/insert-matching';
 import { Upload, X } from 'lucide-react';
 
 export function UploadFileButton() {
@@ -17,11 +18,16 @@ export function UploadFileButton() {
   useEffect(() => {
     if (open) {
       const supabase = createClient();
-      supabase.from('clients').select('id, company_name').order('company_name').then(({ data }) => {
-        setClients(data ?? []);
+      supabase.from('clients').select('*').then(({ data }) => {
+        setClients(
+          (data ?? []).map((row: { id: string; company_name?: string; name?: string }) => ({
+            id: row.id,
+            company_name: row.company_name || row.name || 'Client'
+          }))
+        );
       });
-      supabase.from('projects').select('id, title, client_id').order('title').then(({ data }) => {
-        setProjects(data ?? []);
+      supabase.from('projects').select('*').then(({ data }) => {
+        setProjects((data as { id: string; title: string; client_id: string }[]) ?? []);
       });
     }
   }, [open]);
@@ -49,7 +55,7 @@ export function UploadFileButton() {
       return;
     }
     const { data: sessionData } = await supabase.auth.getSession();
-    const { error: dbError } = await supabase.from('files').insert({
+    const { error: dbError } = await insertMatchingColumns(supabase, 'files', {
       client_id: clientId,
       project_id: projectId || null,
       file_name: file.name,

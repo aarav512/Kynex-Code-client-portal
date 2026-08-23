@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { insertMatchingColumns } from '@/lib/supabase/insert-matching';
 import { Plus, X } from 'lucide-react';
 
 export function NewRequestButton() {
@@ -30,18 +31,18 @@ export function NewRequestButton() {
       setLoading(false);
       return;
     }
-    const { data: request, error: reqError } = await supabase
-      .from('requests')
-      .insert({ client_id: profile.client_id, subject, created_by: profile.id })
-      .select()
-      .single();
+    const { data: request, error: reqError } = await insertMatchingColumns(supabase, 'requests', {
+      client_id: profile.client_id,
+      subject,
+      created_by: profile.id
+    });
     if (reqError || !request) {
       setError(reqError?.message || 'Could not create request');
       setLoading(false);
       return;
     }
-    const { error: msgError } = await supabase.from('request_messages').insert({
-      request_id: request.id,
+    const { error: msgError } = await insertMatchingColumns(supabase, 'request_messages', {
+      request_id: (request as { id: string }).id,
       author_id: profile.id,
       body,
       is_staff: false

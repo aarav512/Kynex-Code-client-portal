@@ -1,14 +1,17 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
+import { wrapSupabaseTables } from '@/lib/supabase/schema-map';
 
 export function getBrowserSupabase(): SupabaseClient {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
 
   if (typeof window === 'undefined') {
-    return createSupabaseClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-    });
+    return wrapSupabaseTables(
+      createSupabaseClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      })
+    );
   }
 
   const w = window as Window & { __kynexSupabase?: SupabaseClient };
@@ -19,15 +22,17 @@ export function getBrowserSupabase(): SupabaseClient {
     } catch {
       /* ignore */
     }
-    w.__kynexSupabase = createSupabaseClient(url, key, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-        storage: window.sessionStorage,
-        storageKey: 'kynex-auth'
-      }
-    });
+    w.__kynexSupabase = wrapSupabaseTables(
+      createSupabaseClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          storage: window.sessionStorage,
+          storageKey: 'kynex-auth'
+        }
+      })
+    );
   }
   return w.__kynexSupabase;
 }

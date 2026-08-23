@@ -9,8 +9,16 @@ import { NewAmcButton } from './NewAmcButton';
 
 export default function AdminAmcPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
-    const { data: contracts } = await supabase.from('amc_contracts').select('*, clients!inner(company_name)').order('created_at', { ascending: false });
-    return { rows: (contracts as { id: string; plan_name: string; amount: number; status: string; end_date: string | null; clients: { company_name: string } }[] | null) ?? [] };
+    const { data: contracts } = await supabase.from('amc_contracts').select('*').order('created_at', { ascending: false });
+    const { attachClientCompany } = await import('@/lib/clients-display');
+    const rows = await attachClientCompany(supabase, (contracts as { id: string; client_id?: string; plan_name?: string; name?: string; title?: string; amount: number; status: string; end_date: string | null }[]) ?? []);
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        plan_name: row.plan_name || row.name || row.title || 'AMC',
+        clients: row.clients
+      }))
+    };
   });
 
   return (

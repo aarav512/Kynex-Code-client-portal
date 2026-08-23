@@ -30,8 +30,15 @@ async function downloadFile(path: string, name: string) {
 
 export default function AdminFilesPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
-    const { data: files } = await supabase.from('files').select('*, clients!inner(company_name)').order('created_at', { ascending: false });
-    return { rows: (files as FileRow[] | null) ?? [] };
+    const { data: files } = await supabase.from('files').select('*').order('created_at', { ascending: false });
+    const { attachClientCompany } = await import('@/lib/clients-display');
+    const rows = await attachClientCompany(supabase, (files as FileRow[]) ?? []);
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        file_name: row.file_name || (row as { name?: string }).name || 'File'
+      }))
+    };
   });
 
   return (

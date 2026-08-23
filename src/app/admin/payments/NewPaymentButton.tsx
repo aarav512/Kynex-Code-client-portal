@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { insertMatchingColumns } from '@/lib/supabase/insert-matching';
 import { Plus, X } from 'lucide-react';
 
 export function NewPaymentButton() {
@@ -22,8 +23,15 @@ export function NewPaymentButton() {
   useEffect(() => {
     if (open) {
       const supabase = createClient();
-      supabase.from('clients').select('id, company_name').order('company_name').then(({ data }) => setClients(data ?? []));
-      supabase.from('projects').select('id, title, client_id').order('title').then(({ data }) => setProjects(data ?? []));
+      supabase.from('clients').select('*').then(({ data }) =>
+        setClients(
+          (data ?? []).map((row: { id: string; company_name?: string; name?: string }) => ({
+            id: row.id,
+            company_name: row.company_name || row.name || 'Client'
+          }))
+        )
+      );
+      supabase.from('projects').select('*').then(({ data }) => setProjects((data as { id: string; title: string; client_id: string }[]) ?? []));
     }
   }, [open]);
 
@@ -35,7 +43,7 @@ export function NewPaymentButton() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: insertError } = await supabase.from('payments').insert({
+    const { error: insertError } = await insertMatchingColumns(supabase, 'payments', {
       client_id: clientId,
       project_id: projectId || null,
       description,

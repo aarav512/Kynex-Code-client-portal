@@ -9,8 +9,10 @@ import Link from 'next/link';
 
 export default function AdminRequestsPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
-    const { data: requests } = await supabase.from('requests').select('*, clients!inner(company_name)').order('updated_at', { ascending: false });
-    return { rows: (requests as { id: string; subject: string; status: string; updated_at: string; clients: { company_name: string } }[] | null) ?? [] };
+    const { data: requests } = await supabase.from('requests').select('*').order('updated_at', { ascending: false });
+    const { attachClientCompany } = await import('@/lib/clients-display');
+    const rows = await attachClientCompany(supabase, (requests as { id: string; client_id?: string; subject?: string; title?: string; status: string; updated_at: string }[]) ?? []);
+    return { rows: rows.map((row) => ({ ...row, subject: row.subject || row.title || 'Request' })) };
   });
 
   return (

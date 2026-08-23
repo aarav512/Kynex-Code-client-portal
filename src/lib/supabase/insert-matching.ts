@@ -1,42 +1,62 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  copyColumnAliases,
+  fillRequiredColumn,
+  isMissingRelationError,
+  mappedTable,
+  TABLE_ALIASES
+} from '@/lib/supabase/schema-map';
 
 export async function insertMatchingColumns(
   db: SupabaseClient,
   table: string,
   payload: Record<string, unknown>
 ) {
+  const names = TABLE_ALIASES[table] || [table];
+  let lastError: { message: string } | null = null;
+
+  for (const candidate of [mappedTable(table), ...names]) {
+    const row: Record<string, unknown> = { ...payload };
+    for (let i = 0; i < 16; i++) {
+      const { data, error } = await db.from(candidate).insert(row).select().single();
+      if (!error) return { data, error: null as { message: string } | null };
+      lastError = error;
+      if (isMissingRelationError(error.message)) break;
+
+      const missing = error.message.match(/Could not find the '([^']+)' column/i);
+      if (missing) {
+        copyColumnAliases(row, missing[1]);
+        delete row[missing[1]];
+        continue;
+      }
+      const required = error.message.match(/null value in column "([^"]+)"/i);
+      if (required && fillRequiredColumn(row, required[1])) continue;
+      return { data: null, error };
+    }
+  }
+
+  return { data: null, error: lastError || { message: `Could not insert into ${table}` } };
+}
+
+export async function updateMatchingColumns(
+  db: SupabaseClient,
+  table: string,
+  payload: Record<string, unknown>,
+  id: string
+) {
   const row: Record<string, unknown> = { ...payload };
-  for (let i = 0; i < 8; i++) {
-    const { data, error } = await db.from(table).insert(row).select().single();
-    if (!error) return { data, error: null as { message: string } | null };
-    const match = error.message.match(/Could not find the '([^']+)' column/i);
-    if (match) {
-      delete row[match[1]];
+  for (let i = 0; i < 16; i++) {
+    const { error } = await db.from(table).update(row).eq('id', id);
+    if (!error) return { error: null as { message: string } | null };
+    const missing = error.message.match(/Could not find the '([^']+)' column/i);
+    if (missing) {
+      copyColumnAliases(row, missing[1]);
+      delete row[missing[1]];
       continue;
     }
-    const required = error.message.match(/null value in column "([^"]+)"/i);
-    if (required) {
-      const column = required[1];
-      if (column === 'contact_email' && row.email && !row.contact_email) {
-        row.contact_email = row.email;
-        continue;
-      }
-      if (column === 'email' && row.contact_email && !row.email) {
-        row.email = row.contact_email;
-        continue;
-      }
-      if (column === 'contact_phone' && row.phone && !row.contact_phone) {
-        row.contact_phone = row.phone;
-        continue;
-      }
-      if (column === 'contact_name' && !row.contact_name) {
-        row.contact_name = row.name || row.company_name || 'Client';
-        continue;
-      }
-    }
-    return { data: null, error };
+    return { error };
   }
-  return { data: null, error: { message: `Could not insert into ${table}` } };
+  return { error: { message: `Could not update ${table}` } };
 }
 
 export async function findAuthUserByEmail(db: SupabaseClient, email: string) {

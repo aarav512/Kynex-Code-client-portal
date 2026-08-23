@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
+import { insertMatchingColumns, updateMatchingColumns } from '@/lib/supabase/insert-matching';
 import type { RequestMessage } from '@/lib/database.types';
 import { formatRelative } from '@/lib/utils';
 import { Send, CircleCheck as CheckCircle2 } from 'lucide-react';
@@ -32,7 +33,7 @@ export function RequestThread({
       setError('Not signed in');
       return;
     }
-    const { error: msgError } = await supabase.from('request_messages').insert({
+    const { error: msgError } = await insertMatchingColumns(supabase, 'request_messages', {
       request_id: requestId,
       author_id: userId,
       body,
@@ -48,7 +49,12 @@ export function RequestThread({
 
   async function handleStatusChange(status: string) {
     setIsPending(true);
-    const { error: statusError } = await getBrowserSupabase().from('requests').update({ status }).eq('id', requestId);
+    const { error: statusError } = await updateMatchingColumns(
+      getBrowserSupabase(),
+      'requests',
+      { status },
+      requestId
+    );
     setIsPending(false);
     if (!statusError) window.location.reload();
   }

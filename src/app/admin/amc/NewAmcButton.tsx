@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { insertMatchingColumns } from '@/lib/supabase/insert-matching';
 import { Plus, X } from 'lucide-react';
 
 export function NewAmcButton() {
@@ -20,7 +21,14 @@ export function NewAmcButton() {
   useEffect(() => {
     if (open) {
       const supabase = createClient();
-      supabase.from('clients').select('id, company_name').order('company_name').then(({ data }) => setClients(data ?? []));
+      supabase.from('clients').select('*').then(({ data }) =>
+        setClients(
+          (data ?? []).map((row: { id: string; company_name?: string; name?: string }) => ({
+            id: row.id,
+            company_name: row.company_name || row.name || 'Client'
+          }))
+        )
+      );
     }
   }, [open]);
 
@@ -30,7 +38,7 @@ export function NewAmcButton() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: insertError } = await supabase.from('amc_contracts').insert({
+    const { error: insertError } = await insertMatchingColumns(supabase, 'amc_contracts', {
       client_id: clientId,
       plan_name: planName,
       amount: parseFloat(amount),

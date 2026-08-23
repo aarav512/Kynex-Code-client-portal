@@ -32,3 +32,22 @@ export async function hydrateClientContacts<T extends ClientContact>(
     };
   });
 }
+
+export async function attachClientCompany<T extends { client_id?: string | null }>(
+  supabase: SupabaseClient,
+  rows: T[]
+): Promise<(T & { clients: { company_name: string } })[]> {
+  const ids = [...new Set(rows.map((row) => String(row.client_id || '')).filter(Boolean))];
+  const names = new Map<string, string>();
+  if (ids.length) {
+    const { data } = await supabase.from('clients').select('*').in('id', ids);
+    for (const client of data ?? []) {
+      const row = client as { id: string; company_name?: string; name?: string; contact_name?: string };
+      names.set(String(row.id), String(row.company_name || row.name || row.contact_name || 'Client'));
+    }
+  }
+  return rows.map((row) => ({
+    ...row,
+    clients: { company_name: names.get(String(row.client_id || '')) || '' }
+  }));
+}
