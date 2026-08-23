@@ -42,6 +42,7 @@ export async function createAmcAction(formData: FormData) {
     status,
     start_date: startDate,
     end_date: endDate,
+    renewal_date: endDate || startDate,
     notes
   });
 

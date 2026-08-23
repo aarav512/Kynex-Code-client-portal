@@ -33,7 +33,9 @@ const COLUMN_RENAME: Record<string, string[]> = {
   mime_type: ['file_type', 'content_type', 'type'],
   file_type: ['mime_type', 'content_type', 'type'],
   due_date: ['due'],
-  end_date: ['ends_at'],
+  end_date: ['ends_at', 'renewal_date'],
+  renewal_date: ['end_date', 'ends_at'],
+  paid_date: ['paid_at', 'payment_date'],
   plan_name: ['name', 'title'],
   project_type: ['type', 'category'],
   request_type: ['type', 'category']
@@ -130,6 +132,12 @@ export function expandRowAliases(row: Record<string, unknown>, table?: string) {
   } else {
     delete row.name;
   }
+  const end = row.end_date || row.ends_at || row.renewal_date;
+  if (end != null) {
+    row.end_date = row.end_date ?? end;
+    row.renewal_date = row.renewal_date ?? end;
+    row.ends_at = row.ends_at ?? end;
+  }
   const kind = row.file_type || row.mime_type || row.content_type;
   if (kind != null) {
     row.file_type = kind;
@@ -183,6 +191,18 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string,
     row[column] = row.invoice_number || row.number || makeInvoiceNumber();
     return true;
   }
+  if (column === 'renewal_date' || column === 'end_date' || column === 'ends_at' || column === 'due_date' || column === 'start_date' || column === 'paid_date') {
+    const date =
+      row.renewal_date ||
+      row.end_date ||
+      row.ends_at ||
+      row.due_date ||
+      row.start_date ||
+      row.paid_date ||
+      new Date().toISOString().slice(0, 10);
+    row[column] = date;
+    return true;
+  }
   const defaults = REQUIRED_DEFAULTS[column];
   if (defaults?.length) {
     row[column] = defaults[0];
@@ -226,3 +246,5 @@ export function wrapSupabaseTables(supabase: SupabaseClient): SupabaseClient {
   marked.__kynexFromWrapped = true;
   return supabase;
 }
+
+export { fillRequiredColumn as fillRequiredColumn, nextDefaultForColumn as nextDefaultForColumn };

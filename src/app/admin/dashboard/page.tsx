@@ -48,7 +48,7 @@ function DashboardView({
   amc: unknown[];
 }) {
   const totalRevenue = payments.filter((p) => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0);
-  const outstanding = payments.filter((p) => p.status === 'pending' || p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0);
+  const outstanding = payments.filter((p) => p.status === 'pending' || p.status === 'unpaid' || p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0);
   const openRequests = requests.filter((r) => r.status === 'open' || r.status === 'in_progress').length;
   const stats = [
     { label: 'Clients', value: clients.length, icon: Users, href: '/admin/clients' },
@@ -73,11 +73,11 @@ function DashboardView({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-line bg-paper p-4">
-          <p className="text-xs text-ink-600">Total Revenue (Paid)</p>
+          <p className="text-xs text-ink-600">Received</p>
           <p className="mt-1 font-display text-2xl font-semibold text-moss">{formatMoney(totalRevenue)}</p>
         </div>
         <div className="rounded-lg border border-line bg-paper p-4">
-          <p className="text-xs text-ink-600">Outstanding</p>
+          <p className="text-xs text-ink-600">Pending</p>
           <p className="mt-1 font-display text-2xl font-semibold text-amber">{formatMoney(outstanding)}</p>
         </div>
       </div>

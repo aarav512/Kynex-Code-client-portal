@@ -261,6 +261,52 @@ DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'active'; E
 DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'pending'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'review'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'completed'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'on_hold'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+NOTIFY pgrst, 'reload schema';
+
+-- AMC requires renewal_date
+ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS renewal_date date;
+ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS end_date date;
+CREATE OR REPLACE FUNCTION public.amc_fill_required()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.renewal_date IS NULL THEN
+    NEW.renewal_date := COALESCE(NEW.end_date, NEW.start_date, CURRENT_DATE);
+  END IF;
+  IF to_jsonb(NEW) ? 'end_date' AND NEW.end_date IS NULL THEN
+    NEW.end_date := COALESCE(NEW.renewal_date, NEW.start_date);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS amc_fill_required_trg ON public.amc;
+CREATE TRIGGER amc_fill_required_trg
+BEFORE INSERT OR UPDATE ON public.amc
+FOR EACH ROW EXECUTE FUNCTION public.amc_fill_required();
+
+-- Clients can mark their own invoices as paid
+GRANT SELECT, INSERT, UPDATE ON public.invoices TO authenticated;
+DROP POLICY IF EXISTS kynex_invoices_update ON public.invoices;
+CREATE POLICY kynex_invoices_update ON public.invoices
+FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND (
+        lower(p.role::text) IN ('admin', 'administrator')
+        OR p.client_id = client_id
+      )
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND (
+        lower(p.role::text) IN ('admin', 'administrator')
+        OR p.client_id = client_id
+      )
+  )
+);
 
 NOTIFY pgrst, 'reload schema';

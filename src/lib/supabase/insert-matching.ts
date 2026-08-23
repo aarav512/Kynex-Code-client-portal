@@ -2,11 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   copyColumnAliases,
   expandRowAliases,
-  fillRequiredColumn,
+  fillRequiredColumn as fillRequiredColumn,
   isMissingRelationError,
   makeInvoiceNumber,
   mappedTable,
-  nextDefaultForColumn,
+  nextDefaultForColumn as nextDefaultForColumn,
   omitsNameColumn,
   TABLE_ALIASES
 } from '@/lib/supabase/schema-map';
@@ -86,14 +86,39 @@ export async function updateMatchingColumns(
   id: string
 ) {
   const row: Record<string, unknown> = { ...payload };
-  for (let i = 0; i < 16; i++) {
-    const { error } = await db.from(table).update(row).eq('id', id);
+  expandRowAliases(row, table);
+  if (omitsNameColumn(table)) delete row.name;
+  for (let i = 0; i < 24; i++) {
+    const { error } = await db.from(mappedTable(table)).update(row).eq('id', id);
     if (!error) return { error: null as { message: string } | null };
-    const missing = error.message.match(/Could not find the '([^']+)' column/i);
+    if (isMissingRelationError(error.message)) return { error };
+    const missing =
+      error.message.match(/Could not find the ['"]([^'"]+)['"] column/i) ||
+      error.message.match(/column ['"]([^'"]+)['"] of ['"]?(\w+)/i);
     if (missing) {
       copyColumnAliases(row, missing[1]);
       delete row[missing[1]];
+      if (omitsNameColumn(table) || missing[1] === 'name') delete row.name;
       continue;
+    }
+    const required = error.message.match(/null value in column "([^"]+)"/i);
+    if (required) {
+      expandRowAliases(row, table);
+      if (omitsNameColumn(table)) delete row.name;
+      if (fillRequiredColumn(row, required[1], table)) continue;
+    }
+    const enumMatch = error.message.match(/invalid input value for enum ["']?(\w+)["']?:\s*["']([^"']+)["']/i);
+    const enumName = enumMatch?.[1];
+    const enumValue = enumMatch?.[2];
+    const badCol =
+      (enumValue && Object.keys(row).find((key) => String(row[key]) === enumValue)) ||
+      (enumName?.includes('status') ? 'status' : undefined);
+    if (badCol && row[badCol] != null) {
+      const next = nextDefaultForColumn(badCol, row[badCol], table, enumName);
+      if (next != null) {
+        row[badCol] = next;
+        continue;
+      }
     }
     return { error };
   }

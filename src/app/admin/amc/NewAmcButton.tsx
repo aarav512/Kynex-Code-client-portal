@@ -45,6 +45,7 @@ export function NewAmcButton() {
       status,
       start_date: startDate,
       end_date: endDate || startDate,
+      renewal_date: endDate || startDate,
       notes: notes || null
     });
     if (insertError) {
