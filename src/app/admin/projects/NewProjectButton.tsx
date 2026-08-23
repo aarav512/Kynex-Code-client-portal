@@ -43,7 +43,7 @@ export function NewProjectButton() {
       title,
       name: title,
       description: description || null,
-      status,
+      status: status === 'planning' ? 'in_progress' : status,
       project_type: 'general',
       type: 'general',
       start_date: startDate || null,

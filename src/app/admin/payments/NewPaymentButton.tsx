@@ -51,7 +51,7 @@ export function NewPaymentButton() {
       status,
       due_date: dueDate || null,
       paid_date: paidDate || null,
-      invoice_number: invoiceNumber || null
+      invoice_number: invoiceNumber || `INV-${Date.now()}`
     });
     if (insertError) {
       setError(insertError.message);

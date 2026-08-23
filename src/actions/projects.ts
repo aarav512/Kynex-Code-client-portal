@@ -27,6 +27,7 @@ export async function createProjectAction(formData: FormData) {
   const title = String(formData.get('title'));
   const description = String(formData.get('description') || '');
   const status = String(formData.get('status') || 'planning');
+  const projectStatus = status === 'planning' ? 'in_progress' : status;
   const startDate = String(formData.get('start_date') || '') || null;
   const dueDate = String(formData.get('due_date') || '') || null;
   const budget = formData.get('budget')
@@ -38,7 +39,7 @@ export async function createProjectAction(formData: FormData) {
     title,
     name: title,
     description: description || null,
-    status,
+    status: projectStatus,
     project_type: 'general',
     start_date: startDate,
     due_date: dueDate,

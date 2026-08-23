@@ -29,7 +29,7 @@ export async function createPaymentAction(formData: FormData) {
   const status = String(formData.get('status') || 'pending');
   const dueDate = String(formData.get('due_date') || '') || null;
   const paidDate = String(formData.get('paid_date') || '') || null;
-  const invoiceNumber = String(formData.get('invoice_number') || '') || null;
+  const invoiceNumber = String(formData.get('invoice_number') || '') || `INV-${Date.now()}`;
   const projectId = String(formData.get('project_id') || '') || null;
 
   if (!clientId || !description || isNaN(amount)) {

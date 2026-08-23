@@ -38,7 +38,6 @@ export async function createAmcAction(formData: FormData) {
   const { error } = await supabase.from('amc_contracts').insert({
     client_id: clientId,
     plan_name: planName,
-    name: planName,
     amount,
     status,
     start_date: startDate,

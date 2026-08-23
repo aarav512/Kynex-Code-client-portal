@@ -44,9 +44,46 @@ const REQUIRED_DEFAULTS: Record<string, unknown[]> = {
   request_type: ['support', 'general', 'change', 'other'],
   type: ['general', 'website', 'support', 'other'],
   category: ['general', 'support', 'other', 'change'],
-  priority: ['normal', 'medium', 'low', 'high', 0],
-  status: ['open', 'planning', 'active', 'pending']
+  priority: ['normal', 'medium', 'low', 'high', 0]
 };
+
+const STATUS_DEFAULTS: Record<string, unknown[]> = {
+  requests: ['open', 'new', 'in_progress', 'submitted', 'active', 'resolved', 'closed'],
+  projects: ['in_progress', 'active', 'planning', 'review', 'completed', 'on_hold', 'draft'],
+  amc: ['active', 'expired', 'cancelled'],
+  amc_contracts: ['active', 'expired', 'cancelled'],
+  invoices: ['pending', 'unpaid', 'paid', 'overdue', 'cancelled', 'draft'],
+  payments: ['pending', 'unpaid', 'paid', 'overdue', 'cancelled', 'draft']
+};
+
+const NO_NAME_TABLES = new Set([
+  'requests',
+  'request_messages',
+  'amc',
+  'amc_contracts',
+  'invoices',
+  'payments',
+  'files'
+]);
+
+export function omitsNameColumn(table?: string) {
+  if (!table) return false;
+  return NO_NAME_TABLES.has(table) || NO_NAME_TABLES.has(mappedTable(table));
+}
+
+export function statusDefaultsFor(table?: string, enumName?: string) {
+  if (enumName?.includes('request') || table === 'requests') return STATUS_DEFAULTS.requests;
+  if (enumName?.includes('project') || table === 'projects') return STATUS_DEFAULTS.projects;
+  if (enumName?.includes('amc') || table === 'amc' || table === 'amc_contracts') return STATUS_DEFAULTS.amc;
+  if (enumName?.includes('invoice') || enumName?.includes('payment') || table === 'invoices' || table === 'payments') {
+    return STATUS_DEFAULTS.invoices;
+  }
+  return STATUS_DEFAULTS.requests;
+}
+
+export function makeInvoiceNumber() {
+  return `INV-${Date.now()}`;
+}
 
 export function isMissingRelationError(message: string) {
   if (/column/i.test(message)) return false;
@@ -82,7 +119,7 @@ export function expandRowAliases(row: Record<string, unknown>, table?: string) {
   if (row.contact_email != null && row.email == null) row.email = row.contact_email;
   if (row.phone != null && row.contact_phone == null) row.contact_phone = row.phone;
   if (row.subject != null && row.title == null) row.title = row.subject;
-  const useName = table !== 'requests' && table !== 'request_messages';
+  const useName = !omitsNameColumn(table);
   if (useName) {
     if (row.title != null && row.name == null) row.name = row.title;
     if (row.name != null && row.title == null) row.title = row.name;
@@ -100,7 +137,7 @@ export function expandRowAliases(row: Record<string, unknown>, table?: string) {
   }
 }
 
-export function fillRequiredColumn(row: Record<string, unknown>, column: string) {
+export function fillRequiredColumn(row: Record<string, unknown>, column: string, table?: string) {
   if (row[column] != null && row[column] !== '') return true;
   for (const alt of COLUMN_RENAME[column] || []) {
     if (row[alt] != null) {
@@ -112,9 +149,12 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
     row.title = row.subject;
     return true;
   }
-  if (column === 'name' && (row.title != null || row.subject != null || row.plan_name != null)) {
-    row.name = row.title || row.subject || row.plan_name;
-    return true;
+  if (column === 'name') {
+    if (omitsNameColumn(table)) return false;
+    if (row.title != null || row.subject != null || row.plan_name != null) {
+      row.name = row.title || row.subject || row.plan_name;
+      return true;
+    }
   }
   if (column === 'contact_email' && row.email != null) {
     row.contact_email = row.email;
@@ -136,7 +176,11 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
     return true;
   }
   if (column === 'status') {
-    row.status = row.status || 'open';
+    row.status = row.status || statusDefaultsFor(table)[0];
+    return true;
+  }
+  if (column === 'invoice_number' || column === 'number') {
+    row[column] = row.invoice_number || row.number || makeInvoiceNumber();
     return true;
   }
   const defaults = REQUIRED_DEFAULTS[column];
@@ -162,12 +206,15 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
   return false;
 }
 
-export function nextDefaultForColumn(column: string, current: unknown) {
+export function nextDefaultForColumn(column: string, current: unknown, table?: string, enumName?: string) {
   const defaults =
-    REQUIRED_DEFAULTS[column] ||
-    (column.endsWith('_type') || column === 'type' ? REQUIRED_DEFAULTS.project_type : []);
+    column === 'status'
+      ? statusDefaultsFor(table, enumName)
+      : REQUIRED_DEFAULTS[column] ||
+        (column.endsWith('_type') || column === 'type' ? REQUIRED_DEFAULTS.project_type : []);
   const idx = defaults.findIndex((value) => String(value) === String(current));
-  if (idx >= 0 && idx < defaults.length - 1) return defaults[idx + 1];
+  if (idx === -1) return defaults[0] ?? null;
+  if (idx < defaults.length - 1) return defaults[idx + 1];
   return null;
 }
 

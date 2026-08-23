@@ -4,10 +4,22 @@ import {
   expandRowAliases,
   fillRequiredColumn,
   isMissingRelationError,
+  makeInvoiceNumber,
   mappedTable,
   nextDefaultForColumn,
+  omitsNameColumn,
   TABLE_ALIASES
 } from '@/lib/supabase/schema-map';
+
+function prepareRow(table: string, payload: Record<string, unknown>) {
+  const row: Record<string, unknown> = { ...payload };
+  expandRowAliases(row, table);
+  if (omitsNameColumn(table)) delete row.name;
+  if ((table === 'payments' || table === 'invoices' || mappedTable(table) === 'invoices') && !row.invoice_number) {
+    row.invoice_number = makeInvoiceNumber();
+  }
+  return row;
+}
 
 export async function insertMatchingColumns(
   db: SupabaseClient,
@@ -18,9 +30,7 @@ export async function insertMatchingColumns(
   let lastError: { message: string } | null = null;
 
   for (const candidate of [mappedTable(table), ...names]) {
-    const row: Record<string, unknown> = { ...payload };
-    expandRowAliases(row, table);
-    if (table === 'requests' || table === 'request_messages') delete row.name;
+    const row = prepareRow(table, payload);
     for (let i = 0; i < 24; i++) {
       const { data, error } = await db.from(candidate).insert(row).select().single();
       if (!error) return { data, error: null as { message: string } | null };
@@ -29,26 +39,30 @@ export async function insertMatchingColumns(
 
       const missing =
         error.message.match(/Could not find the ['"]([^'"]+)['"] column/i) ||
-        error.message.match(/column ['"]([^'"]+)['"] of relation/i);
+        error.message.match(/column ['"]([^'"]+)['"] of ['"]?(\w+)/i) ||
+        error.message.match(/Could not find the ['"]([^'"]+)['"] column of/i);
       if (missing) {
         copyColumnAliases(row, missing[1]);
         if (missing[1] !== 'storage_path') delete row[missing[1]];
-        if (table === 'requests' || table === 'request_messages') delete row.name;
+        if (omitsNameColumn(table) || missing[1] === 'name') delete row.name;
         continue;
       }
       const required = error.message.match(/null value in column "([^"]+)"/i);
       if (required) {
         expandRowAliases(row, table);
-        if (table === 'requests' || table === 'request_messages') delete row.name;
-        if (fillRequiredColumn(row, required[1])) continue;
+        if (omitsNameColumn(table)) delete row.name;
+        if (fillRequiredColumn(row, required[1], table)) continue;
       }
-      const enumValue = error.message.match(/invalid input value for enum \w+: "([^"]+)"/i);
+      const enumMatch = error.message.match(/invalid input value for enum ["']?(\w+)["']?:\s*["']([^"']+)["']/i);
       const checkCol = error.message.match(/check constraint "\w*?([a-z_]+?)_check"/i);
+      const enumName = enumMatch?.[1];
+      const enumValue = enumMatch?.[2];
       const badCol =
         checkCol?.[1] ||
-        (enumValue && Object.keys(row).find((key) => String(row[key]) === enumValue[1]));
+        (enumValue && Object.keys(row).find((key) => String(row[key]) === enumValue)) ||
+        (enumName?.includes('status') ? 'status' : undefined);
       if (badCol && row[badCol] != null) {
-        const next = nextDefaultForColumn(badCol, row[badCol]);
+        const next = nextDefaultForColumn(badCol, row[badCol], table, enumName);
         if (next != null) {
           row[badCol] = next;
           continue;

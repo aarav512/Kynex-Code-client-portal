@@ -220,3 +220,47 @@ WITH CHECK (
 );
 
 NOTIFY pgrst, 'reload schema';
+
+-- AMC has no name column; add it so older payloads still work
+ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS name text;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'amc' AND column_name = 'plan_name'
+  ) THEN
+    UPDATE public.amc SET name = COALESCE(name, plan_name) WHERE name IS NULL;
+  END IF;
+END $$;
+
+-- Invoices require invoice_number
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS invoice_number text;
+CREATE SEQUENCE IF NOT EXISTS public.invoices_number_seq;
+CREATE OR REPLACE FUNCTION public.invoices_fill_required()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.invoice_number IS NULL OR NEW.invoice_number::text = '' THEN
+    NEW.invoice_number := 'INV-' || to_char(now(), 'YYYYMMDDHH24MISS') || '-' || nextval('public.invoices_number_seq')::text;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS invoices_fill_required_trg ON public.invoices;
+CREATE TRIGGER invoices_fill_required_trg
+BEFORE INSERT OR UPDATE ON public.invoices
+FOR EACH ROW EXECUTE FUNCTION public.invoices_fill_required();
+
+-- Accept the status values the portal sends
+DO $$ BEGIN ALTER TYPE public.request_status ADD VALUE IF NOT EXISTS 'open'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.request_status ADD VALUE IF NOT EXISTS 'new'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.request_status ADD VALUE IF NOT EXISTS 'in_progress'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.request_status ADD VALUE IF NOT EXISTS 'pending'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'planning'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'in_progress'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'active'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'pending'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'review'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'completed'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TYPE public.project_status ADD VALUE IF NOT EXISTS 'on_hold'; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_object THEN NULL; END $$;
+
+NOTIFY pgrst, 'reload schema';

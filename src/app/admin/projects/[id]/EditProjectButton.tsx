@@ -38,7 +38,7 @@ export function EditProjectButton({ project }: { project: ProjectData }) {
         title,
         name: title,
         description: description || null,
-        status,
+        status: status === 'planning' ? 'in_progress' : status,
         start_date: startDate || null,
         due_date: dueDate || null,
         budget: budget ? parseFloat(budget) : null
