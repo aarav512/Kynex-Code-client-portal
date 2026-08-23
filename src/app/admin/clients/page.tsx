@@ -14,7 +14,8 @@ import { AddClientButton } from './AddClientButton';
 export default function AdminClientsPage() {
   const { loading, error, data } = usePortalData(async (supabase) => {
     const { data: clients } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-    return { clients: (clients as Client[]) ?? [] };
+    const { hydrateClientContacts } = await import('@/lib/clients-display');
+    return { clients: (await hydrateClientContacts(supabase, (clients as Client[]) ?? [])) as Client[] };
   });
 
   return (

@@ -10,7 +10,7 @@ export default function ClientProfilePage() {
   const { loading, error, data } = usePortalData(async (supabase, session) => {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
     const { data: client } = profile?.client_id
-      ? await supabase.from('clients').select('company_name, email, phone').eq('id', profile.client_id).maybeSingle()
+      ? await supabase.from('clients').select('*').eq('id', profile.client_id).maybeSingle()
       : { data: null };
     return { profile, client };
   });
@@ -27,7 +27,7 @@ function ProfileView({
   client
 }: {
   profile: { id: string; full_name: string; email: string; role: string; created_at: string };
-  client: { company_name: string; email: string; phone: string | null } | null;
+  client: { company_name?: string; email?: string; phone?: string | null } | null;
 }) {
   const [name, setName] = useState(profile.full_name);
   const [message, setMessage] = useState<string | null>(null);

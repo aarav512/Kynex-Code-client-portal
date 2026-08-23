@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
 import { requireAdminUser } from '@/lib/supabase/assert-admin';
+import { findAuthUserByEmail, insertMatchingColumns } from '@/lib/supabase/insert-matching';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const companyName = String(body.company_name || '');
   const contactName = String(body.contact_name || '');
-  const email = String(body.email || '');
+  const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
   const phone = String(body.phone || '');
   if (!companyName || !contactName || !email || password.length < 6) {
@@ -28,39 +29,101 @@ export async function POST(request: NextRequest) {
   }
 
   const service = admin.db;
+  let createdAuthUser = false;
+  let userId: string | null = null;
 
-  const { data: authData, error: authError } = await service.auth.admin.createUser({
+  const created = await service.auth.admin.createUser({
     email,
     password,
     email_confirm: true
   });
-  if (authError || !authData.user) return NextResponse.json({ error: authError?.message || 'Could not create user' }, { status: 400 });
 
-  const userId = authData.user.id;
-  const { data: client, error: clientError } = await service
-    .from('clients')
-    .insert({ company_name: companyName, contact_name: contactName, email, phone: phone || null })
-    .select()
-    .single();
+  if (created.data.user && !created.error) {
+    userId = created.data.user.id;
+    createdAuthUser = true;
+  } else {
+    const already =
+      /already/i.test(created.error?.message || '') ||
+      /registered/i.test(created.error?.message || '') ||
+      created.error?.status === 422;
+    if (!already) {
+      return NextResponse.json({ error: created.error?.message || 'Could not create user' }, { status: 400 });
+    }
 
-  if (clientError) {
-    await service.auth.admin.deleteUser(userId);
-    return NextResponse.json({ error: clientError.message }, { status: 400 });
+    const existing = await findAuthUserByEmail(service, email);
+    if (existing.error || !existing.user) {
+      return NextResponse.json(
+        { error: created.error?.message || 'A login with this email already exists, but it could not be linked.' },
+        { status: 400 }
+      );
+    }
+    if (existing.user.id === admin.user.id) {
+      return NextResponse.json(
+        { error: 'That email is your admin login. Use the client’s own email address.' },
+        { status: 400 }
+      );
+    }
+
+    userId = existing.user.id;
+    const { error: passwordError } = await service.auth.admin.updateUserById(userId, {
+      password,
+      email_confirm: true
+    });
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError.message }, { status: 400 });
+    }
   }
 
-  const { error: profileError } = await service.from('profiles').insert({
-    id: userId,
-    role: 'client',
-    client_id: client.id,
-    full_name: contactName,
-    email
+  if (!userId) return NextResponse.json({ error: 'Could not create user' }, { status: 400 });
+
+  const { data: existingProfile } = await service
+    .from('profiles')
+    .select('id, role, client_id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (existingProfile?.role === 'admin') {
+    if (createdAuthUser) await service.auth.admin.deleteUser(userId);
+    return NextResponse.json({ error: 'That email belongs to an admin account.' }, { status: 400 });
+  }
+  if (existingProfile?.client_id) {
+    return NextResponse.json(
+      { error: 'This email already has a client login. Open that client in the portal, or use a different email.' },
+      { status: 400 }
+    );
+  }
+
+  const { data: client, error: clientError } = await insertMatchingColumns(service, 'clients', {
+    company_name: companyName,
+    contact_name: contactName,
+    email,
+    phone: phone || null
   });
 
+  if (clientError || !client) {
+    if (createdAuthUser) await service.auth.admin.deleteUser(userId);
+    return NextResponse.json({ error: clientError?.message || 'Could not create client' }, { status: 400 });
+  }
+
+  const clientId = String((client as { id: string }).id);
+  const profilePayload = {
+    id: userId,
+    role: 'client',
+    client_id: clientId,
+    full_name: contactName,
+    email
+  };
+
+  const profileResult = existingProfile
+    ? await service.from('profiles').update({ role: 'client', client_id: clientId, full_name: contactName, email }).eq('id', userId)
+    : await insertMatchingColumns(service, 'profiles', profilePayload);
+
+  const profileError = 'error' in profileResult ? profileResult.error : null;
   if (profileError) {
-    await service.from('clients').delete().eq('id', client.id);
-    await service.auth.admin.deleteUser(userId);
+    await service.from('clients').delete().eq('id', clientId);
+    if (createdAuthUser) await service.auth.admin.deleteUser(userId);
     return NextResponse.json({ error: profileError.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, clientId: client.id });
+  return NextResponse.json({ ok: true, clientId });
 }

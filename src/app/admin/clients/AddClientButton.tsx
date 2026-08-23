@@ -83,6 +83,7 @@ export function AddClientButton() {
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Email</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink-900 transition-base focus:border-signal focus:outline-none" />
+                <p className="mt-1 text-xs text-ink-600">This is their portal login. After you create them, add invoices and files under Payments and Files, then send them this email and password.</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Password</label>

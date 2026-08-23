@@ -13,12 +13,18 @@ export function getBrowserSupabase(): SupabaseClient {
 
   const w = window as Window & { __kynexSupabase?: SupabaseClient };
   if (!w.__kynexSupabase) {
+    try {
+      window.localStorage.removeItem('kynex-auth');
+      window.localStorage.removeItem('kynex-session');
+    } catch {
+      /* ignore */
+    }
     w.__kynexSupabase = createSupabaseClient(url, key, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
-        storage: window.localStorage,
+        storage: window.sessionStorage,
         storageKey: 'kynex-auth'
       }
     });

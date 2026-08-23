@@ -17,8 +17,9 @@ export default function AdminDashboard() {
       supabase.from('payments').select('*').order('created_at', { ascending: false }),
       supabase.from('amc_contracts').select('*').eq('status', 'active')
     ]);
+    const { hydrateClientContacts } = await import('@/lib/clients-display');
     return {
-      clients: clients.data ?? [],
+      clients: await hydrateClientContacts(supabase, clients.data ?? []),
       projects: projects.data ?? [],
       requests: requests.data ?? [],
       payments: payments.data ?? [],

@@ -17,21 +17,28 @@ export function resolvePortalRole(profile: { role?: string | null; client_id?: s
   return 'client';
 }
 
+function dropSavedLogins() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('kynex-auth');
+}
+
 export function saveKynexSession(session: StoredSession) {
   if (typeof window === 'undefined') return;
+  dropSavedLogins();
   const existing = loadKynexSession();
   const value = JSON.stringify({
     access_token: session.access_token,
     refresh_token: session.refresh_token,
     role: session.role || existing?.role
   });
-  localStorage.setItem(STORAGE_KEY, value);
   sessionStorage.setItem(STORAGE_KEY, value);
 }
 
 export function loadKynexSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+  dropSavedLogins();
+  const raw = sessionStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as StoredSession;
@@ -44,9 +51,9 @@ export function loadKynexSession(): StoredSession | null {
 
 export function clearKynexSession() {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
+  dropSavedLogins();
   sessionStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem('kynex-auth');
+  sessionStorage.removeItem('kynex-auth');
 }
 
 export async function restoreKynexSession(supabase: SupabaseClient): Promise<Session | null> {
