@@ -1,16 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-type ClientContact = {
-  id: string;
-  email?: string | null;
-  contact_email?: string | null;
-  contact_name?: string | null;
-};
-
-export async function hydrateClientContacts<T extends ClientContact>(
-  supabase: SupabaseClient,
-  clients: T[]
-): Promise<T[]> {
+export async function hydrateClientContacts(supabase: SupabaseClient, clients: any[]): Promise<any[]> {
   const ids = clients.map((client) => String(client.id)).filter(Boolean);
   if (!ids.length) return clients;
 
@@ -25,18 +15,17 @@ export async function hydrateClientContacts<T extends ClientContact>(
 
   return clients.map((client) => {
     const profile = byClient.get(String(client.id));
+    const normalized = normalizePortalRow(client);
     return {
-      ...normalizePortalRow(client),
+      ...client,
+      ...normalized,
       email: String(client.email || client.contact_email || profile?.email || ''),
       contact_name: String(client.contact_name || profile?.full_name || '')
     };
   });
 }
 
-export async function attachClientCompany<T extends { client_id?: string | null }>(
-  supabase: SupabaseClient,
-  rows: T[]
-): Promise<(T & { clients: { company_name: string } })[]> {
+export async function attachClientCompany(supabase: SupabaseClient, rows: any[]): Promise<any[]> {
   const ids = [...new Set(rows.map((row) => String(row.client_id || '')).filter(Boolean))];
   const names = new Map<string, string>();
   if (ids.length) {
@@ -47,26 +36,28 @@ export async function attachClientCompany<T extends { client_id?: string | null 
     }
   }
   return rows.map((row) => ({
+    ...row,
     ...normalizePortalRow(row),
     clients: { company_name: names.get(String(row.client_id || '')) || '' }
   }));
 }
 
-export function normalizePortalRow<T extends Record<string, unknown>>(row: T): T {
-  const storedName = String(row.file_name || '');
-  const path = String(row.storage_path || row.file_path || row.path || (storedName.includes('/') ? storedName : ''));
+export function normalizePortalRow(row: object): any {
+  const record = row as Record<string, unknown>;
+  const storedName = String(record.file_name || '');
+  const path = String(record.storage_path || record.file_path || record.path || (storedName.includes('/') ? storedName : ''));
   const display = storedName.includes('/') ? storedName.split('/').pop() : storedName || path.split('/').pop();
   return {
-    ...row,
-    title: row.title || row.name || row.subject || row.plan_name,
-    subject: row.subject || row.title || row.name,
-    name: row.name || row.title,
-    email: row.email || row.contact_email,
-    phone: row.phone || row.contact_phone,
-    plan_name: row.plan_name || row.name || row.title,
-    file_path: path || row.file_path,
+    ...record,
+    title: record.title || record.name || record.subject || record.plan_name,
+    subject: record.subject || record.title || record.name,
+    name: record.name || record.title,
+    email: record.email || record.contact_email,
+    phone: record.phone || record.contact_phone,
+    plan_name: record.plan_name || record.name || record.title,
+    file_path: path || record.file_path,
     file_name: display || storedName,
-    company_name: row.company_name || row.name,
-    is_staff: row.is_staff ?? false
-  } as T;
+    company_name: record.company_name || record.name,
+    is_staff: record.is_staff ?? false
+  };
 }

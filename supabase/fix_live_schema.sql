@@ -50,3 +50,21 @@ ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS paid_date date;
 ALTER TABLE public.request_messages ADD COLUMN IF NOT EXISTS is_staff boolean DEFAULT false;
 
 NOTIFY pgrst, 'reload schema';
+
+-- If a file is inserted without storage_path, copy file_name into it
+CREATE OR REPLACE FUNCTION public.files_fill_storage_path()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.storage_path IS NULL OR NEW.storage_path = '' THEN
+    NEW.storage_path := COALESCE(NEW.file_name, '');
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS files_fill_storage_path_trg ON public.files;
+CREATE TRIGGER files_fill_storage_path_trg
+BEFORE INSERT OR UPDATE ON public.files
+FOR EACH ROW EXECUTE FUNCTION public.files_fill_storage_path();

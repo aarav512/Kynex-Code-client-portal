@@ -16,7 +16,7 @@ export default function ClientRequestDetailPage() {
     if (!request) return { request: null, messages: [] as RequestMessage[] };
     const { normalizePortalRow } = await import('@/lib/clients-display');
     const { data: messages } = await supabase.from('request_messages').select('*').eq('request_id', request.id).order('created_at', { ascending: true });
-    return { request: normalizePortalRow(request as Record<string, unknown>), messages: (messages as RequestMessage[]) ?? [] };
+    return { request: normalizePortalRow(request), messages: (messages as RequestMessage[]) ?? [] };
   });
 
   return (
