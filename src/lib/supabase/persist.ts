@@ -13,7 +13,6 @@ export type StoredSession = {
 export function resolvePortalRole(profile: { role?: string | null; client_id?: string | null } | null): PortalRole {
   const role = String(profile?.role || '').toLowerCase().trim();
   if (role === 'admin' || role === 'administrator') return 'admin';
-  if (!profile?.client_id) return 'admin';
   return 'client';
 }
 

@@ -4,10 +4,14 @@ import {
   getSupabaseServiceRoleKey,
   getSupabaseUrl
 } from '@/lib/supabase/env';
-import { resolvePortalRole } from '@/lib/supabase/persist';
 
 type AdminOk = { ok: true; user: User; db: SupabaseClient };
 type AdminErr = { ok: false; error: string; status: 401 | 403 | 500 };
+
+function isAdminRole(role: string | null | undefined) {
+  const value = String(role || '').toLowerCase().trim();
+  return value === 'admin' || value === 'administrator';
+}
 
 export async function requireAdminUser(token: string | null): Promise<AdminOk | AdminErr> {
   if (!token) return { ok: false, error: 'Unauthorized', status: 401 };
@@ -34,8 +38,8 @@ export async function requireAdminUser(token: string | null): Promise<AdminOk | 
     .eq('id', userData.user.id)
     .maybeSingle();
 
-  let isAdmin = resolvePortalRole(profile) === 'admin';
-  if (!isAdmin && serviceKey) {
+  let isAdmin = isAdminRole(profile?.role);
+  if (!isAdmin && profile && !profile.client_id && serviceKey) {
     const { count } = await db
       .from('profiles')
       .select('id', { count: 'exact', head: true })
@@ -45,18 +49,8 @@ export async function requireAdminUser(token: string | null): Promise<AdminOk | 
 
   if (!isAdmin) return { ok: false, error: 'Not authorized', status: 403 };
 
-  if (profile?.role !== 'admin' && serviceKey) {
-    if (profile) {
-      await db.from('profiles').update({ role: 'admin' }).eq('id', userData.user.id);
-    } else {
-      await db.from('profiles').insert({
-        id: userData.user.id,
-        role: 'admin',
-        client_id: null,
-        full_name: userData.user.user_metadata?.full_name || userData.user.email || 'Admin',
-        email: userData.user.email || ''
-      });
-    }
+  if (profile && !isAdminRole(profile.role) && serviceKey) {
+    await db.from('profiles').update({ role: 'admin' }).eq('id', userData.user.id);
   }
 
   return { ok: true, user: userData.user, db };

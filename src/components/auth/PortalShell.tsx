@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { Topbar } from '@/components/nav/Topbar';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { restoreKynexSession, loadKynexSession, resolvePortalRole } from '@/lib/supabase/persist';
+import { restoreKynexSession, resolvePortalRole } from '@/lib/supabase/persist';
 
 export function PortalShell({
   role,
@@ -24,14 +24,13 @@ export function PortalShell({
         return;
       }
 
-      const storedRole = loadKynexSession()?.role;
       const { data: row } = await supabase
         .from('profiles')
         .select('id, role, full_name, email, client_id')
         .eq('id', session.user.id)
         .maybeSingle();
 
-      const actualRole = row ? resolvePortalRole(row) : storedRole || 'admin';
+      const actualRole = resolvePortalRole(row);
 
       if (actualRole === 'admin' && role === 'client') {
         window.location.replace('/admin/dashboard');

@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 type ClientContact = {
   id: string;
   email?: string | null;
+  contact_email?: string | null;
   contact_name?: string | null;
 };
 
@@ -26,7 +27,7 @@ export async function hydrateClientContacts<T extends ClientContact>(
     const profile = byClient.get(String(client.id));
     return {
       ...client,
-      email: String(client.email || profile?.email || ''),
+      email: String(client.email || client.contact_email || profile?.email || ''),
       contact_name: String(client.contact_name || profile?.full_name || '')
     };
   });

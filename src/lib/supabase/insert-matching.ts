@@ -14,6 +14,26 @@ export async function insertMatchingColumns(
       delete row[match[1]];
       continue;
     }
+    const required = error.message.match(/null value in column "([^"]+)"/i);
+    if (required) {
+      const column = required[1];
+      if (column === 'contact_email' && row.email && !row.contact_email) {
+        row.contact_email = row.email;
+        continue;
+      }
+      if (column === 'email' && row.contact_email && !row.email) {
+        row.email = row.contact_email;
+        continue;
+      }
+      if (column === 'contact_phone' && row.phone && !row.contact_phone) {
+        row.contact_phone = row.phone;
+        continue;
+      }
+      if (column === 'contact_name' && !row.contact_name) {
+        row.contact_name = row.name || row.company_name || 'Client';
+        continue;
+      }
+    }
     return { data: null, error };
   }
   return { data: null, error: { message: `Could not insert into ${table}` } };

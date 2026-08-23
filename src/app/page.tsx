@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { loadKynexSession, resolvePortalRole, restoreKynexSession } from '@/lib/supabase/persist';
+import { resolvePortalRole, restoreKynexSession } from '@/lib/supabase/persist';
 
 export default function RootPage() {
   useEffect(() => {
@@ -12,13 +12,12 @@ export default function RootPage() {
         window.location.replace('/login');
         return;
       }
-      const storedRole = loadKynexSession()?.role;
       const { data: profile } = await supabase
         .from('profiles')
         .select('role, client_id')
         .eq('id', session.user.id)
         .maybeSingle();
-      const role = storedRole || resolvePortalRole(profile);
+      const role = resolvePortalRole(profile);
       window.location.replace(role === 'admin' ? '/admin/dashboard' : '/dashboard');
     });
   }, []);

@@ -82,9 +82,8 @@ export async function POST(request: NextRequest) {
     .eq('id', userId)
     .maybeSingle();
 
-  if (existingProfile?.role === 'admin') {
-    if (createdAuthUser) await service.auth.admin.deleteUser(userId);
-    return NextResponse.json({ error: 'That email belongs to an admin account.' }, { status: 400 });
+  if (existingProfile?.role === 'admin' && userId === admin.user.id) {
+    return NextResponse.json({ error: 'That email is your admin login. Use the client’s own email address.' }, { status: 400 });
   }
   if (existingProfile?.client_id) {
     return NextResponse.json(
@@ -95,9 +94,12 @@ export async function POST(request: NextRequest) {
 
   const { data: client, error: clientError } = await insertMatchingColumns(service, 'clients', {
     company_name: companyName,
+    name: companyName,
     contact_name: contactName,
     email,
-    phone: phone || null
+    contact_email: email,
+    phone: phone || null,
+    contact_phone: phone || null
   });
 
   if (clientError || !client) {
