@@ -2,11 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   copyColumnAliases,
   expandRowAliases,
-  fillRequiredColumn as fillRequiredColumn,
+  fillRequiredColumn,
   isMissingRelationError,
   makeInvoiceNumber,
   mappedTable,
-  nextDefaultForColumn as nextDefaultForColumn,
+  nextDefaultForColumn,
   omitsNameColumn,
   TABLE_ALIASES
 } from '@/lib/supabase/schema-map';

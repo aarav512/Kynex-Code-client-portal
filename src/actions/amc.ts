@@ -65,6 +65,7 @@ export async function updateAmcAction(amcId: string, formData: FormData) {
       status: String(formData.get('status')),
       start_date: String(formData.get('start_date')),
       end_date: String(formData.get('end_date')),
+      renewal_date: String(formData.get('end_date') || formData.get('start_date')),
       notes: String(formData.get('notes') || '') || null
     })
     .eq('id', amcId);

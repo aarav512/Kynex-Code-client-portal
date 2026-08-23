@@ -57,6 +57,7 @@ NOTIFY pgrst, 'reload schema';
 CREATE OR REPLACE FUNCTION public.files_fill_required()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   IF NEW.storage_path IS NULL OR NEW.storage_path = '' THEN
@@ -88,6 +89,7 @@ FOR EACH ROW EXECUTE FUNCTION public.files_fill_required();
 CREATE OR REPLACE FUNCTION public.projects_fill_required()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 DECLARE
   first_label text;
@@ -149,6 +151,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.requests_fill_required()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   IF to_jsonb(NEW) ? 'title' AND (NEW.title IS NULL OR NEW.title::text = '') THEN
@@ -237,7 +240,9 @@ END $$;
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS invoice_number text;
 CREATE SEQUENCE IF NOT EXISTS public.invoices_number_seq;
 CREATE OR REPLACE FUNCTION public.invoices_fill_required()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   IF NEW.invoice_number IS NULL OR NEW.invoice_number::text = '' THEN
     NEW.invoice_number := 'INV-' || to_char(now(), 'YYYYMMDDHH24MISS') || '-' || nextval('public.invoices_number_seq')::text;
@@ -267,7 +272,9 @@ NOTIFY pgrst, 'reload schema';
 ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS renewal_date date;
 ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS end_date date;
 CREATE OR REPLACE FUNCTION public.amc_fill_required()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   IF NEW.renewal_date IS NULL THEN
     NEW.renewal_date := COALESCE(NEW.end_date, NEW.start_date, CURRENT_DATE);
@@ -308,5 +315,30 @@ WITH CHECK (
       )
   )
 );
+
+NOTIFY pgrst, 'reload schema';
+
+-- Linter: pin search_path; stop anonymous RPC on SECURITY DEFINER helpers
+ALTER FUNCTION public.set_updated_at() SET search_path = public;
+ALTER FUNCTION public.files_fill_required() SET search_path = public;
+ALTER FUNCTION public.projects_fill_required() SET search_path = public;
+ALTER FUNCTION public.requests_fill_required() SET search_path = public;
+ALTER FUNCTION public.invoices_fill_required() SET search_path = public;
+ALTER FUNCTION public.amc_fill_required() SET search_path = public;
+
+DO $$ BEGIN ALTER FUNCTION public.is_admin() SET search_path = public; EXCEPTION WHEN undefined_function THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION public.current_role() SET search_path = public; EXCEPTION WHEN undefined_function THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION public.current_client_id() SET search_path = public; EXCEPTION WHEN undefined_function THEN NULL; END $$;
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_admin() FROM anon;
+REVOKE ALL ON FUNCTION public.current_role() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_role() FROM anon;
+REVOKE ALL ON FUNCTION public.current_client_id() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_client_id() FROM anon;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_client_id() TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

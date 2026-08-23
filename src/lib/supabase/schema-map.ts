@@ -246,5 +246,3 @@ export function wrapSupabaseTables(supabase: SupabaseClient): SupabaseClient {
   marked.__kynexFromWrapped = true;
   return supabase;
 }
-
-export { fillRequiredColumn as fillRequiredColumn, nextDefaultForColumn as nextDefaultForColumn };
