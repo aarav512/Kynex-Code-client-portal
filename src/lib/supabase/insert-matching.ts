@@ -19,22 +19,27 @@ export async function insertMatchingColumns(
 
   for (const candidate of [mappedTable(table), ...names]) {
     const row: Record<string, unknown> = { ...payload };
-    expandRowAliases(row);
+    expandRowAliases(row, table);
+    if (table === 'requests' || table === 'request_messages') delete row.name;
     for (let i = 0; i < 24; i++) {
       const { data, error } = await db.from(candidate).insert(row).select().single();
       if (!error) return { data, error: null as { message: string } | null };
       lastError = error;
       if (isMissingRelationError(error.message)) break;
 
-      const missing = error.message.match(/Could not find the '([^']+)' column/i);
+      const missing =
+        error.message.match(/Could not find the ['"]([^'"]+)['"] column/i) ||
+        error.message.match(/column ['"]([^'"]+)['"] of relation/i);
       if (missing) {
         copyColumnAliases(row, missing[1]);
         if (missing[1] !== 'storage_path') delete row[missing[1]];
+        if (table === 'requests' || table === 'request_messages') delete row.name;
         continue;
       }
       const required = error.message.match(/null value in column "([^"]+)"/i);
       if (required) {
-        expandRowAliases(row);
+        expandRowAliases(row, table);
+        if (table === 'requests' || table === 'request_messages') delete row.name;
         if (fillRequiredColumn(row, required[1])) continue;
       }
       const enumValue = error.message.match(/invalid input value for enum \w+: "([^"]+)"/i);

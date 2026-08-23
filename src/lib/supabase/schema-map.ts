@@ -49,7 +49,8 @@ const REQUIRED_DEFAULTS: Record<string, unknown[]> = {
 };
 
 export function isMissingRelationError(message: string) {
-  return /Could not find the table/i.test(message) || /schema cache/i.test(message);
+  if (/column/i.test(message)) return false;
+  return /Could not find the table/i.test(message);
 }
 
 export function mappedTable(logical: string) {
@@ -69,7 +70,7 @@ export function copyColumnAliases(row: Record<string, unknown>, column: string) 
   }
 }
 
-export function expandRowAliases(row: Record<string, unknown>) {
+export function expandRowAliases(row: Record<string, unknown>, table?: string) {
   const path = row.storage_path || row.file_path || row.path;
   if (path != null) {
     row.storage_path = path;
@@ -81,16 +82,21 @@ export function expandRowAliases(row: Record<string, unknown>) {
   if (row.contact_email != null && row.email == null) row.email = row.contact_email;
   if (row.phone != null && row.contact_phone == null) row.contact_phone = row.phone;
   if (row.subject != null && row.title == null) row.title = row.subject;
-  if (row.title != null && row.name == null) row.name = row.title;
-  if (row.name != null && row.title == null) row.title = row.name;
+  const useName = table !== 'requests' && table !== 'request_messages';
+  if (useName) {
+    if (row.title != null && row.name == null) row.name = row.title;
+    if (row.name != null && row.title == null) row.title = row.name;
+    if (row.plan_name != null) {
+      row.name = row.name ?? row.plan_name;
+      row.title = row.title ?? row.plan_name;
+    }
+  } else {
+    delete row.name;
+  }
   const kind = row.file_type || row.mime_type || row.content_type;
   if (kind != null) {
     row.file_type = kind;
     row.mime_type = row.mime_type ?? kind;
-  }
-  if (row.plan_name != null) {
-    row.name = row.name ?? row.plan_name;
-    row.title = row.title ?? row.plan_name;
   }
 }
 

@@ -23,7 +23,9 @@ UPDATE public.clients SET phone = contact_phone WHERE phone IS NULL AND contact_
 
 -- Requests (app uses subject)
 ALTER TABLE public.requests ADD COLUMN IF NOT EXISTS subject text;
+ALTER TABLE public.requests ADD COLUMN IF NOT EXISTS name text;
 UPDATE public.requests SET subject = title WHERE subject IS NULL AND title IS NOT NULL;
+UPDATE public.requests SET name = COALESCE(title, subject) WHERE name IS NULL;
 
 -- Projects (app uses title)
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS title text;
