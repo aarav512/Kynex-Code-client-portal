@@ -36,6 +36,7 @@ export function EditProjectButton({ project }: { project: ProjectData }) {
       'projects',
       {
         title,
+        name: title,
         description: description || null,
         status,
         start_date: startDate || null,

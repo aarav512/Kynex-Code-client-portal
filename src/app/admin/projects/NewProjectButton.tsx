@@ -41,6 +41,7 @@ export function NewProjectButton() {
     const { error: insertError } = await insertMatchingColumns(supabase, 'projects', {
       client_id: clientId,
       title,
+      name: title,
       description: description || null,
       status,
       start_date: startDate || null,

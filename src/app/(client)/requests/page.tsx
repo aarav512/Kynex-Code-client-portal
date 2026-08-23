@@ -5,6 +5,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/lib/utils';
 import { PortalState, usePortalData } from '@/components/auth/usePortalData';
+import { normalizePortalRow } from '@/lib/clients-display';
 import Link from 'next/link';
 import { NewRequestButton } from './NewRequestButton';
 
@@ -13,7 +14,7 @@ export default function ClientRequestsPage() {
     const { data: profile } = await supabase.from('profiles').select('client_id').eq('id', session.user.id).maybeSingle();
     if (!profile?.client_id) return { linked: false, rows: [] as { id: string; subject: string; status: string; updated_at: string }[] };
     const { data: rows } = await supabase.from('requests').select('*').eq('client_id', profile.client_id).order('updated_at', { ascending: false });
-    return { linked: true, rows: rows ?? [] };
+    return { linked: true, rows: ((rows ?? []) as Record<string, unknown>[]).map((row) => normalizePortalRow(row)) as { id: string; subject: string; status: string; updated_at: string }[] };
   });
 
   return (

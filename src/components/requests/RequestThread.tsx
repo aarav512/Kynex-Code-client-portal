@@ -9,11 +9,13 @@ import { Send, CircleCheck as CheckCircle2 } from 'lucide-react';
 
 export function RequestThread({
   requestId,
+  clientId,
   messages,
   isAdmin,
   currentStatus
 }: {
   requestId: string;
+  clientId?: string | null;
   messages: RequestMessage[];
   isAdmin: boolean;
   currentStatus: string;
@@ -35,6 +37,7 @@ export function RequestThread({
     }
     const { error: msgError } = await insertMatchingColumns(supabase, 'request_messages', {
       request_id: requestId,
+      client_id: clientId || null,
       author_id: userId,
       body,
       is_staff: isAdmin

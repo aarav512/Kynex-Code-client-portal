@@ -34,6 +34,8 @@ export function NewRequestButton() {
     const { data: request, error: reqError } = await insertMatchingColumns(supabase, 'requests', {
       client_id: profile.client_id,
       subject,
+      title: subject,
+      description: body,
       created_by: profile.id
     });
     if (reqError || !request) {
@@ -43,6 +45,7 @@ export function NewRequestButton() {
     }
     const { error: msgError } = await insertMatchingColumns(supabase, 'request_messages', {
       request_id: (request as { id: string }).id,
+      client_id: profile.client_id,
       author_id: profile.id,
       body,
       is_staff: false

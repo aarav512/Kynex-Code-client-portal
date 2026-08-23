@@ -7,6 +7,7 @@ import { PortalState, usePortalData } from '@/components/auth/usePortalData';
 import Link from 'next/link';
 import { FolderKanban } from 'lucide-react';
 import type { Project } from '@/lib/database.types';
+import { normalizePortalRow } from '@/lib/clients-display';
 
 export default function ClientProjectsPage() {
   const { loading, error, data } = usePortalData(async (supabase, session) => {
@@ -17,7 +18,7 @@ export default function ClientProjectsPage() {
       .select('*')
       .eq('client_id', profile.client_id)
       .order('updated_at', { ascending: false });
-    return { clientId: profile.client_id, projects: (projects as Project[]) ?? [] };
+    return { clientId: profile.client_id, projects: ((projects ?? []) as Record<string, unknown>[]).map((row) => normalizePortalRow(row)) as Project[] };
   });
 
   return (

@@ -44,7 +44,7 @@ export function NewAmcButton() {
       amount: parseFloat(amount),
       status,
       start_date: startDate,
-      end_date: endDate,
+      end_date: endDate || startDate,
       notes: notes || null
     });
     if (insertError) {

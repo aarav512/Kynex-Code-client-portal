@@ -15,7 +15,7 @@ export default function AdminProjectDetailPage() {
     if (!project) return { project: null, company: '' };
     const { attachClientCompany } = await import('@/lib/clients-display');
     const [hydrated] = await attachClientCompany(supabase, [project as { id: string; client_id?: string }]);
-    return { project, company: hydrated.clients.company_name };
+    return { project: hydrated, company: hydrated.clients.company_name };
   });
 
   return (
@@ -23,7 +23,15 @@ export default function AdminProjectDetailPage() {
       {data?.project ? (
         <div className="space-y-6">
           <Link href="/admin/projects" className="flex items-center gap-1 text-sm text-ink-600"><ArrowLeft className="h-4 w-4" /> Back</Link>
-          <PageHeader title={data.project.title} description={data.company} action={<EditProjectButton project={data.project} />} />
+          <PageHeader title={String(data.project.title || data.project.name || 'Project')} description={data.company} action={<EditProjectButton project={{
+            id: data.project.id,
+            title: String(data.project.title || data.project.name || 'Project'),
+            description: data.project.description ?? null,
+            status: data.project.status,
+            start_date: data.project.start_date ?? null,
+            due_date: data.project.due_date ?? null,
+            budget: data.project.budget ?? null
+          }} />} />
           <StatusPill status={data.project.status} />
           <p className="text-sm text-ink-600">{data.project.description || 'No description'}</p>
         </div>
