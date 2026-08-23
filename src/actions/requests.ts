@@ -36,7 +36,12 @@ export async function createRequestAction(formData: FormData) {
       client_id: clientId,
       project_id: projectId,
       subject,
-      created_by: profile.id
+      title: subject,
+      description: body,
+      created_by: profile.id,
+      status: 'open',
+      priority: 'normal',
+      category: 'general'
     })
     .select()
     .single();
@@ -47,6 +52,7 @@ export async function createRequestAction(formData: FormData) {
     .from('request_messages')
     .insert({
       request_id: request.id,
+      client_id: clientId,
       author_id: profile.id,
       body,
       is_staff: profile.role === 'admin'
@@ -68,8 +74,15 @@ export async function addRequestMessageAction(
 
   if (!body) return { error: 'Message cannot be empty.' };
 
+  const { data: requestRow } = await supabase
+    .from('requests')
+    .select('client_id')
+    .eq('id', requestId)
+    .maybeSingle();
+
   const { error } = await supabase.from('request_messages').insert({
     request_id: requestId,
+    client_id: requestRow?.client_id || profile?.client_id,
     author_id: profile?.id,
     body,
     is_staff: profile?.role === 'admin'

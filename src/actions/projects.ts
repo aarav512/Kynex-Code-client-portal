@@ -36,8 +36,10 @@ export async function createProjectAction(formData: FormData) {
   const { error } = await supabase.from('projects').insert({
     client_id: clientId,
     title,
+    name: title,
     description: description || null,
     status,
+    project_type: 'general',
     start_date: startDate,
     due_date: dueDate,
     budget

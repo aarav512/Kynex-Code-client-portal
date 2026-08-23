@@ -36,7 +36,10 @@ export function NewRequestButton() {
       subject,
       title: subject,
       description: body,
-      created_by: profile.id
+      created_by: profile.id,
+      status: 'open',
+      priority: 'normal',
+      category: 'general'
     });
     if (reqError || !request) {
       setError(reqError?.message || 'Could not create request');

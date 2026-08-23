@@ -34,7 +34,18 @@ const COLUMN_RENAME: Record<string, string[]> = {
   file_type: ['mime_type', 'content_type', 'type'],
   due_date: ['due'],
   end_date: ['ends_at'],
-  plan_name: ['name', 'title']
+  plan_name: ['name', 'title'],
+  project_type: ['type', 'category'],
+  request_type: ['type', 'category']
+};
+
+const REQUIRED_DEFAULTS: Record<string, unknown[]> = {
+  project_type: ['general', 'website', 'web', 'application', 'app', 'other', 'custom', 'development', 'maintenance'],
+  request_type: ['support', 'general', 'change', 'other'],
+  type: ['general', 'website', 'support', 'other'],
+  category: ['general', 'support', 'other', 'change'],
+  priority: ['normal', 'medium', 'low', 'high', 0],
+  status: ['open', 'planning', 'active', 'pending']
 };
 
 export function isMissingRelationError(message: string) {
@@ -77,10 +88,14 @@ export function expandRowAliases(row: Record<string, unknown>) {
     row.file_type = kind;
     row.mime_type = row.mime_type ?? kind;
   }
+  if (row.plan_name != null) {
+    row.name = row.name ?? row.plan_name;
+    row.title = row.title ?? row.plan_name;
+  }
 }
 
 export function fillRequiredColumn(row: Record<string, unknown>, column: string) {
-  if (row[column] != null) return true;
+  if (row[column] != null && row[column] !== '') return true;
   for (const alt of COLUMN_RENAME[column] || []) {
     if (row[alt] != null) {
       row[column] = row[alt];
@@ -91,8 +106,8 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
     row.title = row.subject;
     return true;
   }
-  if (column === 'name' && (row.title != null || row.subject != null)) {
-    row.name = row.title || row.subject;
+  if (column === 'name' && (row.title != null || row.subject != null || row.plan_name != null)) {
+    row.name = row.title || row.subject || row.plan_name;
     return true;
   }
   if (column === 'contact_email' && row.email != null) {
@@ -107,15 +122,47 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
     }
   }
   if (column === 'file_type' || column === 'mime_type') {
-    const kind = row.file_type || row.mime_type || row.content_type || 'application/octet-stream';
-    row[column] = kind;
+    row[column] = row.file_type || row.mime_type || row.content_type || 'application/octet-stream';
     return true;
   }
   if (column === 'file_size') {
     row.file_size = row.file_size ?? 0;
     return true;
   }
+  if (column === 'status') {
+    row.status = row.status || 'open';
+    return true;
+  }
+  const defaults = REQUIRED_DEFAULTS[column];
+  if (defaults?.length) {
+    row[column] = defaults[0];
+    return true;
+  }
+  if (column.endsWith('_type') || column === 'type' || column === 'category') {
+    row[column] = 'general';
+    return true;
+  }
+  if (column === 'priority') {
+    row.priority = 'normal';
+    return true;
+  }
+  if (!/_id$/.test(column) && column !== 'id' && !column.includes('date')) {
+    const fallback = row.name || row.title || row.subject || row.plan_name || row.description || 'general';
+    if (fallback != null) {
+      row[column] = fallback;
+      return true;
+    }
+  }
   return false;
+}
+
+export function nextDefaultForColumn(column: string, current: unknown) {
+  const defaults =
+    REQUIRED_DEFAULTS[column] ||
+    (column.endsWith('_type') || column === 'type' ? REQUIRED_DEFAULTS.project_type : []);
+  const idx = defaults.findIndex((value) => String(value) === String(current));
+  if (idx >= 0 && idx < defaults.length - 1) return defaults[idx + 1];
+  return null;
 }
 
 export function wrapSupabaseTables(supabase: SupabaseClient): SupabaseClient {

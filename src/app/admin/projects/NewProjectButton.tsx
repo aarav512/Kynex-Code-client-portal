@@ -44,6 +44,8 @@ export function NewProjectButton() {
       name: title,
       description: description || null,
       status,
+      project_type: 'general',
+      type: 'general',
       start_date: startDate || null,
       due_date: dueDate || null,
       budget: budget ? parseFloat(budget) : null

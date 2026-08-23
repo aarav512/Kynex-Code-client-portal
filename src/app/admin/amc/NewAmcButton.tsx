@@ -41,6 +41,8 @@ export function NewAmcButton() {
     const { error: insertError } = await insertMatchingColumns(supabase, 'amc_contracts', {
       client_id: clientId,
       plan_name: planName,
+      name: planName,
+      title: planName,
       amount: parseFloat(amount),
       status,
       start_date: startDate,

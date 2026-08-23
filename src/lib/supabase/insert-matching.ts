@@ -5,6 +5,7 @@ import {
   fillRequiredColumn,
   isMissingRelationError,
   mappedTable,
+  nextDefaultForColumn,
   TABLE_ALIASES
 } from '@/lib/supabase/schema-map';
 
@@ -19,7 +20,7 @@ export async function insertMatchingColumns(
   for (const candidate of [mappedTable(table), ...names]) {
     const row: Record<string, unknown> = { ...payload };
     expandRowAliases(row);
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 24; i++) {
       const { data, error } = await db.from(candidate).insert(row).select().single();
       if (!error) return { data, error: null as { message: string } | null };
       lastError = error;
@@ -35,6 +36,22 @@ export async function insertMatchingColumns(
       if (required) {
         expandRowAliases(row);
         if (fillRequiredColumn(row, required[1])) continue;
+      }
+      const enumValue = error.message.match(/invalid input value for enum \w+: "([^"]+)"/i);
+      const checkCol = error.message.match(/check constraint "\w*?([a-z_]+?)_check"/i);
+      const badCol =
+        checkCol?.[1] ||
+        (enumValue && Object.keys(row).find((key) => String(row[key]) === enumValue[1]));
+      if (badCol && row[badCol] != null) {
+        const next = nextDefaultForColumn(badCol, row[badCol]);
+        if (next != null) {
+          row[badCol] = next;
+          continue;
+        }
+      }
+      if (/invalid input syntax for type integer/i.test(error.message) && typeof row.priority === 'string') {
+        row.priority = 0;
+        continue;
       }
       return { data: null, error };
     }
