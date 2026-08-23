@@ -46,9 +46,7 @@ export async function uploadFileAction(formData: FormData) {
     client_id: clientId,
     project_id: projectId,
     file_name: file.name,
-    file_path: filePath,
-    file_size: file.size,
-    mime_type: file.type || 'application/octet-stream',
+    storage_path: filePath,
     uploaded_by: profile.id
   });
 

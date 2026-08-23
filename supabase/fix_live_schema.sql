@@ -31,11 +31,13 @@ ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS due_date date;
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS budget numeric(12,2);
 UPDATE public.projects SET title = name WHERE title IS NULL AND name IS NOT NULL;
 
--- Files (app uses file_path)
+-- Files (live column is storage_path)
 ALTER TABLE public.files ADD COLUMN IF NOT EXISTS file_path text;
+ALTER TABLE public.files ADD COLUMN IF NOT EXISTS storage_path text;
 ALTER TABLE public.files ADD COLUMN IF NOT EXISTS file_size bigint DEFAULT 0;
 ALTER TABLE public.files ADD COLUMN IF NOT EXISTS mime_type text DEFAULT 'application/octet-stream';
-UPDATE public.files SET file_path = file_name WHERE file_path IS NULL;
+UPDATE public.files SET storage_path = COALESCE(storage_path, file_path, file_name) WHERE storage_path IS NULL;
+UPDATE public.files SET file_path = COALESCE(file_path, storage_path, file_name) WHERE file_path IS NULL;
 
 -- AMC extra columns the portal form sends
 ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS end_date date;
