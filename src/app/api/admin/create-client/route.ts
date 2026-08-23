@@ -1,22 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAnonKey, getSupabaseServiceRoleKey, getSupabaseUrl } from '@/lib/supabase/env';
+import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
+import { requireAdminUser } from '@/lib/supabase/assert-admin';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null;
+  const admin = await requireAdminUser(token);
+  if (!admin.ok) return NextResponse.json({ error: admin.error }, { status: admin.status });
 
-  const authed = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
-  const { data: userData } = await authed.auth.getUser(token);
-  if (!userData.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await authed.from('profiles').select('role').eq('id', userData.user.id).maybeSingle();
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  if (!getSupabaseServiceRoleKey()) {
+    return NextResponse.json(
+      { error: 'Missing SUPABASE_SERVICE_ROLE_KEY. Add it as a GitHub Actions secret and a Cloudflare Pages environment variable, then redeploy.' },
+      { status: 500 }
+    );
+  }
 
   const body = await request.json();
   const companyName = String(body.company_name || '');
@@ -28,9 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'All fields required, password must be 6+ characters.' }, { status: 400 });
   }
 
-  const service = createClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
+  const service = admin.db;
 
   const { data: authData, error: authError } = await service.auth.admin.createUser({
     email,
