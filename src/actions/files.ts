@@ -42,11 +42,16 @@ export async function uploadFileAction(formData: FormData) {
 
   if (uploadError) return { error: uploadError.message };
 
+  const fileType = file.type || 'application/octet-stream';
   const { error: dbError } = await supabase.from('files').insert({
     client_id: clientId,
     project_id: projectId,
     file_name: file.name,
+    file_path: filePath,
     storage_path: filePath,
+    file_size: file.size,
+    mime_type: fileType,
+    file_type: fileType,
     uploaded_by: profile.id
   });
 

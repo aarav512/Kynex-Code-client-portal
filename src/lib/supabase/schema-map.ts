@@ -30,6 +30,8 @@ const COLUMN_RENAME: Record<string, string[]> = {
   file_path: ['file_name', 'storage_path', 'path'],
   storage_path: ['file_path', 'file_name', 'path'],
   path: ['storage_path', 'file_path'],
+  mime_type: ['file_type', 'content_type', 'type'],
+  file_type: ['mime_type', 'content_type', 'type'],
   due_date: ['due'],
   end_date: ['ends_at'],
   plan_name: ['name', 'title']
@@ -70,6 +72,11 @@ export function expandRowAliases(row: Record<string, unknown>) {
   if (row.subject != null && row.title == null) row.title = row.subject;
   if (row.title != null && row.name == null) row.name = row.title;
   if (row.name != null && row.title == null) row.title = row.name;
+  const kind = row.file_type || row.mime_type || row.content_type;
+  if (kind != null) {
+    row.file_type = kind;
+    row.mime_type = row.mime_type ?? kind;
+  }
 }
 
 export function fillRequiredColumn(row: Record<string, unknown>, column: string) {
@@ -98,6 +105,15 @@ export function fillRequiredColumn(row: Record<string, unknown>, column: string)
       row[column] = path;
       return true;
     }
+  }
+  if (column === 'file_type' || column === 'mime_type') {
+    const kind = row.file_type || row.mime_type || row.content_type || 'application/octet-stream';
+    row[column] = kind;
+    return true;
+  }
+  if (column === 'file_size') {
+    row.file_size = row.file_size ?? 0;
+    return true;
   }
   return false;
 }

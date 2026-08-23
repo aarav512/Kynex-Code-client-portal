@@ -51,20 +51,33 @@ ALTER TABLE public.request_messages ADD COLUMN IF NOT EXISTS is_staff boolean DE
 
 NOTIFY pgrst, 'reload schema';
 
--- If a file is inserted without storage_path, copy file_name into it
-CREATE OR REPLACE FUNCTION public.files_fill_storage_path()
+-- Fill every required files column so uploads cannot fail on the next missing field
+CREATE OR REPLACE FUNCTION public.files_fill_required()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
   IF NEW.storage_path IS NULL OR NEW.storage_path = '' THEN
-    NEW.storage_path := COALESCE(NEW.file_name, '');
+    NEW.storage_path := COALESCE(NEW.file_path, NEW.file_name, '');
+  END IF;
+  IF NEW.file_path IS NULL OR NEW.file_path = '' THEN
+    NEW.file_path := COALESCE(NEW.storage_path, NEW.file_name, '');
+  END IF;
+  IF NEW.file_type IS NULL OR NEW.file_type = '' THEN
+    NEW.file_type := COALESCE(NEW.mime_type, 'application/octet-stream');
+  END IF;
+  IF NEW.mime_type IS NULL OR NEW.mime_type = '' THEN
+    NEW.mime_type := COALESCE(NEW.file_type, 'application/octet-stream');
+  END IF;
+  IF NEW.file_size IS NULL THEN
+    NEW.file_size := 0;
   END IF;
   RETURN NEW;
 END;
 $$;
 
 DROP TRIGGER IF EXISTS files_fill_storage_path_trg ON public.files;
-CREATE TRIGGER files_fill_storage_path_trg
+DROP TRIGGER IF EXISTS files_fill_required_trg ON public.files;
+CREATE TRIGGER files_fill_required_trg
 BEFORE INSERT OR UPDATE ON public.files
-FOR EACH ROW EXECUTE FUNCTION public.files_fill_storage_path();
+FOR EACH ROW EXECUTE FUNCTION public.files_fill_required();

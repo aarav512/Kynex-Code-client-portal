@@ -54,11 +54,16 @@ export function UploadFileButton() {
       return;
     }
     const { data: sessionData } = await supabase.auth.getSession();
+    const fileType = file.type || 'application/octet-stream';
     const { error: dbError } = await supabase.from('files').insert({
       client_id: clientId,
       project_id: projectId || null,
       file_name: file.name,
+      file_path: filePath,
       storage_path: filePath,
+      file_size: file.size,
+      mime_type: fileType,
+      file_type: fileType,
       uploaded_by: sessionData.session?.user.id ?? null
     });
     if (dbError) {
