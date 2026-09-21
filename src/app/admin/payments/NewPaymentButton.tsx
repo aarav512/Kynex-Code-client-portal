@@ -51,7 +51,8 @@ export function NewPaymentButton() {
       status,
       due_date: dueDate || null,
       paid_date: paidDate || null,
-      invoice_number: invoiceNumber || `INV-${Date.now()}`
+      invoice_number: invoiceNumber || `INV-${Date.now()}`,
+      currency: 'INR'
     });
     if (insertError) {
       setError(insertError.message);
@@ -100,7 +101,7 @@ export function NewPaymentButton() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Amount ($)</label>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Amount (₹ INR)</label>
                   <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink-900 transition-base focus:border-signal focus:outline-none" />
                 </div>
                 <div>

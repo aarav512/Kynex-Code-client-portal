@@ -24,13 +24,14 @@ export function formatRelative(date: string | Date | null | undefined): string {
   return formatDistanceToNow(d, { addSuffix: true });
 }
 
-export function formatMoney(amount: number | null | undefined): string {
+export function formatMoney(amount: number | null | undefined, currency = 'INR'): string {
   if (amount === null || amount === undefined) return '—';
-  return new Intl.NumberFormat('en-US', {
+  const code = currency === 'USD' || currency === 'EUR' ? currency : 'INR';
+  return new Intl.NumberFormat(code === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    currency: code,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
 }
 

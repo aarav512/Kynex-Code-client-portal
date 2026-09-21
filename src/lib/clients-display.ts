@@ -27,18 +27,31 @@ export async function hydrateClientContacts(supabase: SupabaseClient, clients: a
 
 export async function attachClientCompany(supabase: SupabaseClient, rows: any[]): Promise<any[]> {
   const ids = [...new Set(rows.map((row) => String(row.client_id || '')).filter(Boolean))];
-  const names = new Map<string, string>();
+  const details = new Map<string, { company_name: string; email: string; phone: string }>();
   if (ids.length) {
     const { data } = await supabase.from('clients').select('*').in('id', ids);
     for (const client of data ?? []) {
-      const row = client as { id: string; company_name?: string; name?: string; contact_name?: string };
-      names.set(String(row.id), String(row.company_name || row.name || row.contact_name || 'Client'));
+      const row = client as {
+        id: string;
+        company_name?: string;
+        name?: string;
+        contact_name?: string;
+        email?: string;
+        contact_email?: string;
+        phone?: string;
+        contact_phone?: string;
+      };
+      details.set(String(row.id), {
+        company_name: String(row.company_name || row.name || row.contact_name || 'Client'),
+        email: String(row.email || row.contact_email || ''),
+        phone: String(row.phone || row.contact_phone || '')
+      });
     }
   }
   return rows.map((row) => ({
     ...row,
     ...normalizePortalRow(row),
-    clients: { company_name: names.get(String(row.client_id || '')) || '' }
+    clients: details.get(String(row.client_id || '')) || { company_name: '', email: '', phone: '' }
   }));
 }
 

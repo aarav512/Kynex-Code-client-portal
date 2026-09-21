@@ -43,7 +43,8 @@ export async function createAmcAction(formData: FormData) {
     start_date: startDate,
     end_date: endDate,
     renewal_date: endDate || startDate,
-    notes
+    notes,
+    currency: 'INR'
   });
 
   if (error) return { error: error.message };

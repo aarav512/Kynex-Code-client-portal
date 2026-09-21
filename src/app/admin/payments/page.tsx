@@ -8,6 +8,8 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { PortalState, usePortalData } from '@/components/auth/usePortalData';
 import { NewPaymentButton } from './NewPaymentButton';
 import { EditPaymentButton } from './EditPaymentButton';
+import { ViewInvoiceButton } from '@/components/billing/InvoiceDialog';
+import { makeInvoiceNo, type PortalInvoice } from '@/lib/billing';
 
 type PaymentRow = {
   id: string;
@@ -17,7 +19,9 @@ type PaymentRow = {
   status: string;
   due_date: string | null;
   paid_date?: string | null;
-  clients: { company_name: string };
+  created_at?: string | null;
+  currency?: string | null;
+  clients: { company_name: string; email?: string };
 };
 
 function isPaid(status: string) {
@@ -26,6 +30,23 @@ function isPaid(status: string) {
 
 function isPending(status: string) {
   return status === 'pending' || status === 'unpaid' || status === 'overdue';
+}
+
+function toInvoice(p: PaymentRow): PortalInvoice {
+  return {
+    id: p.id,
+    kind: 'Tax Invoice',
+    number: makeInvoiceNo('INV', p.id, p.invoice_number),
+    description: p.description,
+    amount: Number(p.amount),
+    currency: p.currency || 'INR',
+    status: p.status,
+    issuedOn: p.created_at,
+    dueOn: p.due_date,
+    paidOn: p.paid_date,
+    billToName: p.clients?.company_name || 'Client',
+    billToEmail: p.clients?.email
+  };
 }
 
 export default function AdminPaymentsPage() {
@@ -41,7 +62,7 @@ export default function AdminPaymentsPage() {
         <div className="space-y-6">
           <PageHeader
             title="Payments"
-            description="Add invoices here. Clients pay them from Payments in their portal. Received and pending totals show below and on the dashboard."
+            description="Create professional Kynex Code invoices in INR. Clients pay by UPI. Mark paid only after you receive the money."
             action={<NewPaymentButton />}
           />
           {data.rows.length ? (
@@ -62,13 +83,22 @@ export default function AdminPaymentsPage() {
               </div>
               <DataTable<PaymentRow>
                 columns={[
-                  { key: 'invoice_number', label: 'Invoice #', render: (p) => p.invoice_number || '—' },
+                  { key: 'invoice_number', label: 'Invoice #', render: (p) => makeInvoiceNo('INV', p.id, p.invoice_number) },
                   { key: 'description', label: 'Description' },
                   { key: 'client', label: 'Client', render: (p) => p.clients?.company_name || '—' },
                   { key: 'amount', label: 'Amount', render: (p) => formatMoney(p.amount) },
                   { key: 'status', label: 'Status', render: (p) => <StatusPill status={p.status} /> },
                   { key: 'due_date', label: 'Due', render: (p) => formatDate(p.due_date) },
-                  { key: 'edit', label: '', render: (p) => <EditPaymentButton payment={p} /> }
+                  {
+                    key: 'actions',
+                    label: '',
+                    render: (p) => (
+                      <div className="flex items-center gap-2">
+                        <ViewInvoiceButton invoice={toInvoice(p)} />
+                        <EditPaymentButton payment={p} />
+                      </div>
+                    )
+                  }
                 ]}
                 rows={data.rows}
               />

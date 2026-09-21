@@ -46,7 +46,8 @@ export function NewAmcButton() {
       start_date: startDate,
       end_date: endDate || startDate,
       renewal_date: endDate || startDate,
-      notes: notes || null
+      notes: notes || null,
+      currency: 'INR'
     });
     if (insertError) {
       setError(insertError.message);
@@ -88,7 +89,7 @@ export function NewAmcButton() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Amount ($)</label>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-600">Amount (₹ INR)</label>
                   <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink-900 transition-base focus:border-signal focus:outline-none" />
                 </div>
                 <div>

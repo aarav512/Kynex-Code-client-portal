@@ -7,10 +7,12 @@ import {
   getSupabaseUrl
 } from '@/lib/supabase/env';
 import { mergeCookiesForSupabase } from '@/lib/supabase/session';
+import { wrapSupabaseTables } from '@/lib/supabase/schema-map';
 
 export async function createClient() {
   const cookieStore = await cookies();
-  return createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  return wrapSupabaseTables(
+    createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
     cookieOptions: authCookieOptions,
     cookieEncoding: 'raw',
     cookies: {
@@ -21,11 +23,12 @@ export async function createClient() {
         // Session cookies are written by /api/auth/session and middleware.
       }
     }
-  });
+  }));
 }
 
 export function createServiceClient() {
-  return createServerClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
+  return wrapSupabaseTables(
+    createServerClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
     cookieEncoding: 'raw',
     cookies: {
       getAll() {
@@ -33,5 +36,5 @@ export function createServiceClient() {
       },
       setAll() {}
     }
-  });
+  }));
 }

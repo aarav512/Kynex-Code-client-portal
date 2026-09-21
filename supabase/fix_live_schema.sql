@@ -342,3 +342,36 @@ GRANT EXECUTE ON FUNCTION public.current_role() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.current_client_id() TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
+
+-- INR invoices + admin AMC updates
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS currency text DEFAULT 'INR';
+ALTER TABLE public.amc ADD COLUMN IF NOT EXISTS currency text DEFAULT 'INR';
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.amc TO authenticated;
+DROP POLICY IF EXISTS kynex_amc_update ON public.amc;
+CREATE POLICY kynex_amc_update ON public.amc
+FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND lower(p.role::text) IN ('admin', 'administrator')
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND lower(p.role::text) IN ('admin', 'administrator')
+  )
+);
+DROP POLICY IF EXISTS kynex_amc_insert ON public.amc;
+CREATE POLICY kynex_amc_insert ON public.amc
+FOR INSERT TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND lower(p.role::text) IN ('admin', 'administrator')
+  )
+);
+NOTIFY pgrst, 'reload schema';
