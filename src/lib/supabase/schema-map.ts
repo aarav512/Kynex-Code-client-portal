@@ -80,7 +80,8 @@ export function statusDefaultsFor(table?: string, enumName?: string) {
   if (enumName?.includes('invoice') || enumName?.includes('payment') || table === 'invoices' || table === 'payments') {
     return STATUS_DEFAULTS.invoices;
   }
-  return STATUS_DEFAULTS.requests;
+  if (enumName?.includes('client') || table === 'clients') return ['active', 'inactive', 'suspended'];
+  return ['active', 'inactive'];
 }
 
 export function makeInvoiceNumber() {

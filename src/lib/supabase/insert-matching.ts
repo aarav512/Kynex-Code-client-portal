@@ -21,20 +21,31 @@ function prepareRow(table: string, payload: Record<string, unknown>) {
   return row;
 }
 
+function tableCandidates(table: string) {
+  return [...new Set([mappedTable(table), ...(TABLE_ALIASES[table] || [table])])];
+}
+
+function fingerprint(row: Record<string, unknown>) {
+  return JSON.stringify(row);
+}
+
 export async function insertMatchingColumns(
   db: SupabaseClient,
   table: string,
   payload: Record<string, unknown>
 ) {
-  const names = TABLE_ALIASES[table] || [table];
   let lastError: { message: string } | null = null;
 
-  for (const candidate of [mappedTable(table), ...names]) {
+  for (const candidate of tableCandidates(table)) {
     const row = prepareRow(table, payload);
-    for (let i = 0; i < 24; i++) {
+    let lastMessage = '';
+    for (let i = 0; i < 8; i++) {
+      const before = fingerprint(row);
       const { data, error } = await db.from(candidate).insert(row).select().single();
       if (!error) return { data, error: null as { message: string } | null };
       lastError = error;
+      if (error.message === lastMessage && before === fingerprint(row)) break;
+      lastMessage = error.message;
       if (isMissingRelationError(error.message)) break;
 
       const missing =
@@ -42,16 +53,21 @@ export async function insertMatchingColumns(
         error.message.match(/column ['"]([^'"]+)['"] of ['"]?(\w+)/i) ||
         error.message.match(/Could not find the ['"]([^'"]+)['"] column of/i);
       if (missing) {
-        copyColumnAliases(row, missing[1]);
-        if (missing[1] !== 'storage_path') delete row[missing[1]];
-        if (omitsNameColumn(table) || missing[1] === 'name') delete row.name;
+        const column = missing[1];
+        if (!(column in row) && column !== 'storage_path') break;
+        copyColumnAliases(row, column);
+        if (column !== 'storage_path') delete row[column];
+        if (omitsNameColumn(table) || column === 'name') delete row.name;
+        if (before === fingerprint(row)) break;
         continue;
       }
       const required = error.message.match(/null value in column "([^"]+)"/i);
       if (required) {
         expandRowAliases(row, table);
         if (omitsNameColumn(table)) delete row.name;
-        if (fillRequiredColumn(row, required[1], table)) continue;
+        fillRequiredColumn(row, required[1], table);
+        if (before === fingerprint(row)) break;
+        continue;
       }
       const enumMatch = error.message.match(/invalid input value for enum ["']?(\w+)["']?:\s*["']([^"']+)["']/i);
       const checkCol = error.message.match(/check constraint "\w*?([a-z_]+?)_check"/i);
@@ -65,6 +81,7 @@ export async function insertMatchingColumns(
         const next = nextDefaultForColumn(badCol, row[badCol], table, enumName);
         if (next != null) {
           row[badCol] = next;
+          if (before === fingerprint(row)) break;
           continue;
         }
       }
@@ -88,24 +105,32 @@ export async function updateMatchingColumns(
   const row: Record<string, unknown> = { ...payload };
   expandRowAliases(row, table);
   if (omitsNameColumn(table)) delete row.name;
-  for (let i = 0; i < 24; i++) {
+  let lastMessage = '';
+  for (let i = 0; i < 8; i++) {
+    const before = fingerprint(row);
     const { error } = await db.from(mappedTable(table)).update(row).eq('id', id);
     if (!error) return { error: null as { message: string } | null };
+    if (error.message === lastMessage && before === fingerprint(row)) return { error };
+    lastMessage = error.message;
     if (isMissingRelationError(error.message)) return { error };
     const missing =
       error.message.match(/Could not find the ['"]([^'"]+)['"] column/i) ||
       error.message.match(/column ['"]([^'"]+)['"] of ['"]?(\w+)/i);
     if (missing) {
+      if (!(missing[1] in row)) return { error };
       copyColumnAliases(row, missing[1]);
       delete row[missing[1]];
       if (omitsNameColumn(table) || missing[1] === 'name') delete row.name;
+      if (before === fingerprint(row)) return { error };
       continue;
     }
     const required = error.message.match(/null value in column "([^"]+)"/i);
     if (required) {
       expandRowAliases(row, table);
       if (omitsNameColumn(table)) delete row.name;
-      if (fillRequiredColumn(row, required[1], table)) continue;
+      fillRequiredColumn(row, required[1], table);
+      if (before === fingerprint(row)) return { error };
+      continue;
     }
     const enumMatch = error.message.match(/invalid input value for enum ["']?(\w+)["']?:\s*["']([^"']+)["']/i);
     const enumName = enumMatch?.[1];
@@ -127,7 +152,7 @@ export async function updateMatchingColumns(
 
 export async function findAuthUserByEmail(db: SupabaseClient, email: string) {
   const target = email.trim().toLowerCase();
-  for (let page = 1; page <= 10; page++) {
+  for (let page = 1; page <= 2; page++) {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
     if (error) return { user: null, error };
     const user = data.users.find((entry) => (entry.email || '').toLowerCase() === target) || null;

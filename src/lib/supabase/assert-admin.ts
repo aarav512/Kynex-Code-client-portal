@@ -38,20 +38,8 @@ export async function requireAdminUser(token: string | null): Promise<AdminOk | 
     .eq('id', userData.user.id)
     .maybeSingle();
 
-  let isAdmin = isAdminRole(profile?.role);
-  if (!isAdmin && profile && !profile.client_id && serviceKey) {
-    const { count } = await db
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'admin');
-    if (!count) isAdmin = true;
-  }
-
+  const isAdmin = isAdminRole(profile?.role);
   if (!isAdmin) return { ok: false, error: 'Not authorized', status: 403 };
-
-  if (profile && !isAdminRole(profile.role) && serviceKey) {
-    await db.from('profiles').update({ role: 'admin' }).eq('id', userData.user.id);
-  }
 
   return { ok: true, user: userData.user, db };
 }
